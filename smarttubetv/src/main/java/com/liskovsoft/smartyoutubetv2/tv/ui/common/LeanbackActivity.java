@@ -56,12 +56,6 @@ public abstract class LeanbackActivity extends MotherActivity {
     public boolean dispatchKeyEvent(KeyEvent event) {
         Log.d(TAG, event);
 
-        //mDoubleBackManager.checkDoubleBack(event);
-        //if (mDoubleBackManager.checkDoubleBack(event)) {
-        //    //finishTheApp();
-        //}
-
-        //return mGlobalKeyTranslator.translate(event) || super.dispatchKeyEvent(event);
         KeyEvent newEvent = mGlobalKeyTranslator.translateAlt(event);
         return super.dispatchKeyEvent(newEvent);
     }
@@ -137,9 +131,5 @@ public abstract class LeanbackActivity extends MotherActivity {
 
     private void finishTheApp() {
         mViewManager.properlyFinishTheApp(this);
-    }
-
-    protected boolean shouldFinish() {
-        return !mDoubleBackManager.isMsgShown();
     }
 }
