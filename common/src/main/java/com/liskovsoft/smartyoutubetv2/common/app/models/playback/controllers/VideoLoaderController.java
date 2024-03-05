@@ -429,7 +429,7 @@ public class VideoLoaderController extends PlayerEventListenerHelper implements 
 
     private void applyErrorAction(Throwable error) {
         if (error instanceof OutOfMemoryError) {
-            mPlayerData.setVideoBufferType(PlayerEngine.BUFFER_LOW);
+            mPlayerData.setVideoBufferType(PlayerData.BUFFER_LOW);
         } else if (Helpers.startsWithAny(error.getMessage(), "Unable to connect to ", "Invalid NAL length")) {
             mPlayerTweaksData.setPlayerDataSource(PlayerTweaksData.PLAYER_DATA_SOURCE_DEFAULT);
         }
@@ -526,7 +526,8 @@ public class VideoLoaderController extends PlayerEventListenerHelper implements 
             return false;
         }
 
-        if (formatInfo.isLive() && mPlayerTweaksData.isDashUrlStreamsForced()) {
+        // Live dash url doesn't work with None buffer
+        if (formatInfo.isLive() && (mPlayerTweaksData.isDashUrlStreamsForced() || mPlayerData.getVideoBufferType() == PlayerData.BUFFER_NONE)) {
             return false;
         }
 
