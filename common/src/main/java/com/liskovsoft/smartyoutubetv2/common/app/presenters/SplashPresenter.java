@@ -178,6 +178,7 @@ public class SplashPresenter extends BasePresenter<SplashView> {
     }
 
     public void updateChannels() {
+        // Can't use class directly! ATV module is disabled for some flavors.
         Class<?> clazz = null;
 
         try {
@@ -310,7 +311,7 @@ public class SplashPresenter extends BasePresenter<SplashView> {
         });
     }
 
-    private void applyNewIntent(Intent intent) {
+    public void applyNewIntent(Intent intent) {
         if (intent != null) {
             mBridgePackageName = intent.getStringExtra("bridge_package_name");
         }
