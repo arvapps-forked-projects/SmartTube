@@ -499,8 +499,8 @@
     <string name="thumb_quality_start">Початок відео</string>
     <string name="thumb_quality_middle">Середина відео</string>
     <string name="thumb_quality_end">Кінець відео</string>
-    <string name="content_block_status">Перевірити стан SponsorBlock</string>
-    <string name="dearrow_status">Перевірити стан DeArrow</string>
+    <string name="content_block_status">Перевірити стан серверу SponsorBlock</string>
+    <string name="dearrow_status">Перевірити стан серверу DeArrow</string>
     <string name="player_show_quality_info_bitrate">Додавати бітрейт до інформації о якості відео</string>
     <string name="player_speed_button_old_behavior">Повернути стару поведінку кнопки швидкість</string>
     <string name="protect_settings_with_password">Захистити усі налаштування паролем</string>
@@ -640,4 +640,5 @@
     <string name="dearrow_not_submitted_thumbs">Звідки брати не надіслані мініатюри</string>
     <string name="pitch_effect">Ефект висоти тона</string>
     <string name="fullscreen_mode">Повноекранний режим (без системних панелей)</string>
+    <string name="player_only_mode">Показувати лише плеєр, якщо відео відкрито поза застосунком</string>
 </resources>

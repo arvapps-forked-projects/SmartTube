@@ -507,8 +507,8 @@
     <string name="thumb_quality_start">Start of the video</string>
     <string name="thumb_quality_middle">Middle of the video</string>
     <string name="thumb_quality_end">End of the video</string>
-    <string name="content_block_status">Check SponsorBlock status</string>
-    <string name="dearrow_status">Check DeArrow status</string>
+    <string name="content_block_status">Check SponsorBlock server status</string>
+    <string name="dearrow_status">Check DeArrow server status</string>
     <string name="player_show_quality_info_bitrate">Add bitrate into the quality info</string>
     <string name="player_speed_button_old_behavior">Revert old behavior of the speed button</string>
     <string name="protect_settings_with_password">Protect all settings with password</string>
@@ -649,4 +649,5 @@
     <string name="dearrow_not_submitted_thumbs">Where to grab not submitted thumbnails</string>
     <string name="pitch_effect">Pitch effect</string>
     <string name="fullscreen_mode">Fullscreen mode (without system bars)</string>
+    <string name="player_only_mode">Show only the player if the video is opened outside of the app</string>
 </resources>
