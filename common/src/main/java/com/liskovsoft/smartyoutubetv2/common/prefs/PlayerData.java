@@ -99,8 +99,6 @@ public class PlayerData extends DataChangeBase implements PlayerEngineConstants,
     private float mPitch;
 
     private static class SpeedItem {
-        private static final String OBJ_DELIM = "&vi;";
-
         public String channelId;
         public float speed;
 
@@ -110,7 +108,7 @@ public class PlayerData extends DataChangeBase implements PlayerEngineConstants,
         }
 
         public static SpeedItem fromString(String specs) {
-            String[] split = Helpers.split(OBJ_DELIM, specs);
+            String[] split = Helpers.splitObj(specs);
 
             if (split == null || split.length != 2) {
                 return new SpeedItem(null, 1);
@@ -122,7 +120,7 @@ public class PlayerData extends DataChangeBase implements PlayerEngineConstants,
         @NonNull
         @Override
         public String toString() {
-            return Helpers.merge(OBJ_DELIM, channelId, speed);
+            return Helpers.mergeObj(channelId, speed);
         }
     }
 
@@ -722,7 +720,7 @@ public class PlayerData extends DataChangeBase implements PlayerEngineConstants,
     private void restoreState() {
         String data = mPrefs.getProfileData(VIDEO_PLAYER_DATA);
 
-        String[] split = Helpers.splitObject(data);
+        String[] split = Helpers.splitData(data);
 
         mOKButtonBehavior = Helpers.parseInt(split, 0, ONLY_UI);
         mUiHideTimeoutSec = Helpers.parseInt(split, 1, 3);
@@ -810,7 +808,7 @@ public class PlayerData extends DataChangeBase implements PlayerEngineConstants,
     protected void persistState() {
         String enabledSubtitles = Helpers.mergeArray(mEnabledSubtitlesPerChannel.toArray());
 
-        mPrefs.setProfileData(VIDEO_PLAYER_DATA, Helpers.mergeObject(mOKButtonBehavior, mUiHideTimeoutSec, null,
+        mPrefs.setProfileData(VIDEO_PLAYER_DATA, Helpers.mergeData(mOKButtonBehavior, mUiHideTimeoutSec, null,
                 mSeekPreviewMode, mIsSeekConfirmPauseEnabled,
                 mIsClockEnabled, mIsRemainingTimeEnabled, mBackgroundMode, null, // afrData was there
                 Helpers.toString(mVideoFormat), Helpers.toString(mAudioFormat), Helpers.toString(mSubtitleFormat),

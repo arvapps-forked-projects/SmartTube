@@ -87,6 +87,7 @@ public class GeneralData implements ProfileChangeListener {
     private boolean mIsOldChannelLookEnabled;
     private boolean mIsOldUpdateNotificationsEnabled;
     private boolean mRememberSubscriptionsPosition;
+    private boolean mRememberPinnedPosition;
     private boolean mIsRemapDpadUpToSpeedEnabled;
     private boolean mIsRemapDpadUpToVolumeEnabled;
     private boolean mIsRemapDpadLeftToVolumeEnabled;
@@ -355,6 +356,16 @@ public class GeneralData implements ProfileChangeListener {
 
     public boolean isRememberSubscriptionsPositionEnabled() {
         return mRememberSubscriptionsPosition;
+    }
+
+    public void rememberPinnedPosition(boolean remember) {
+        mRememberPinnedPosition = remember;
+        //mSelectedSubscriptionsItem = null; // reset on change
+        persistState();
+    }
+
+    public boolean isRememberPinnedPositionEnabled() {
+        return mRememberPinnedPosition;
     }
 
     public void hideWatchedFromHome(boolean enable) {
@@ -945,7 +956,7 @@ public class GeneralData implements ProfileChangeListener {
     private void restoreState() {
         String data = mPrefs.getProfileData(GENERAL_DATA);
 
-        String[] split = Helpers.splitObject(data);
+        String[] split = Helpers.splitData(data);
 
         // Zero index is skipped. Selected sections were there.
         mBootSectionId = Helpers.parseInt(split, 1, MediaGroup.TYPE_HOME);
@@ -1011,6 +1022,7 @@ public class GeneralData implements ProfileChangeListener {
         mIsOldChannelLookEnabled = Helpers.parseBoolean(split, 59, Build.VERSION.SDK_INT <= 19);
         mIsFullscreenModeEnabled = Helpers.parseBoolean(split, 60, !Helpers.isTouchSupported(mContext));
         mIsHideWatchedFromWatchLaterEnabled = Helpers.parseBoolean(split, 61, false);
+        mRememberPinnedPosition = Helpers.parseBoolean(split, 62, false);
 
         if (pinnedItems != null && !pinnedItems.isEmpty()) {
             String[] pinnedItemsArr = Helpers.splitArray(pinnedItems);
@@ -1060,7 +1072,7 @@ public class GeneralData implements ProfileChangeListener {
         }
         String playlistOrder = Helpers.mergeList(playlistOrderPairs);
         // Zero index is skipped. Selected sections were there.
-        mPrefs.setProfileData(GENERAL_DATA, Helpers.mergeObject(null, mBootSectionId, mIsSettingsSectionEnabled, mAppExitShortcut, mIsPlayerOnlyModeEnabled, mBackgroundShortcut, Helpers.mergeList(mPinnedItems), mIsHideShortsFromSubscriptionsEnabled,
+        mPrefs.setProfileData(GENERAL_DATA, Helpers.mergeData(null, mBootSectionId, mIsSettingsSectionEnabled, mAppExitShortcut, mIsPlayerOnlyModeEnabled, mBackgroundShortcut, Helpers.mergeList(mPinnedItems), mIsHideShortsFromSubscriptionsEnabled,
                 mIsRemapFastForwardToNextEnabled, null,
                 mIsProxyEnabled, mIsBridgeCheckEnabled, mIsOkButtonLongPressDisabled, mLastPlaylistId,
                 null, mIsHideUpcomingEnabled, mIsRemapPageUpToNextEnabled, mIsRemapPageUpToLikeEnabled,
@@ -1073,7 +1085,7 @@ public class GeneralData implements ProfileChangeListener {
                 mRememberSubscriptionsPosition, Helpers.toString(mSelectedSubscriptionsItem),
                 mIsRemapNumbersToSpeedEnabled, mIsRemapDpadUpToSpeedEnabled, mIsRemapChannelUpToVolumeEnabled, mIsRemapDpadUpToVolumeEnabled,
                 mIsRemapDpadLeftToVolumeEnabled, mIsRemapNextToFastForwardEnabled, mIsHideWatchedFromNotificationsEnabled, Helpers.mergeList(mChangelog), mPlayerExitShortcut,
-                mIsOldChannelLookEnabled, mIsFullscreenModeEnabled, mIsHideWatchedFromWatchLaterEnabled));
+                mIsOldChannelLookEnabled, mIsFullscreenModeEnabled, mIsHideWatchedFromWatchLaterEnabled, mRememberPinnedPosition));
     }
 
     private int getSectionId(Video item) {

@@ -61,7 +61,7 @@ public abstract class DataSaverBase extends DataChangeBase {
     private void restoreState() {
         String data = mAppPrefs.getData(mDataKey);
 
-        String[] split = Helpers.splitObject(data);
+        String[] split = Helpers.splitData(data);
 
         if (split != null) {
             mValues.addAll(Arrays.asList(split));
@@ -71,7 +71,7 @@ public abstract class DataSaverBase extends DataChangeBase {
     @Override
     protected void persistState() {
         super.persistState();
-        mAppPrefs.setData(mDataKey, Helpers.mergeObject(
+        mAppPrefs.setData(mDataKey, Helpers.mergeData(
                 mValues.toArray()
         ));
     }
