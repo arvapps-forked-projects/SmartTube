@@ -95,11 +95,12 @@ public class GeneralData implements ProfileChangeListener {
     private boolean mIsHideWatchedFromWatchLaterEnabled;
     private Video mSelectedSubscriptionsItem;
     private List<String> mChangelog;
+    private Map<String, Integer> mPlaylistOrder;
     private final Map<Integer, Integer> mDefaultSections = new LinkedHashMap<>();
-    private final Map<String, Integer> mPlaylistOrder = new HashMap<>();
     private final List<Video> mPendingStreams = new CopyOnWriteArrayList<>();
     private final List<Video> mPinnedItems = new CopyOnWriteHashList<>();
     private boolean mIsFullscreenModeEnabled;
+    private List<Video> mSelectedVideos;
 
     private GeneralData(Context context) {
         mContext = context;
@@ -987,7 +988,7 @@ public class GeneralData implements ProfileChangeListener {
         mIsScreensaverDisabled = Helpers.parseBoolean(split, 26, false);
         mIsVPNEnabled = Helpers.parseBoolean(split, 27, false);
         mLastPlaylistTitle = Helpers.parseStr(split, 28);
-        String playlistOrder = Helpers.parseStr(split, 29);
+        mPlaylistOrder = Helpers.parseMap(split, 29, Helpers::parseStr, Helpers::parseInt);
         String pendingStreams = Helpers.parseStr(split, 30);
         mIsGlobalClockEnabled = Helpers.parseBoolean(split, 31, true);
         mTimeFormat = Helpers.parseInt(split, 32, -1);
@@ -1023,8 +1024,10 @@ public class GeneralData implements ProfileChangeListener {
         mIsFullscreenModeEnabled = Helpers.parseBoolean(split, 60, !Helpers.isTouchSupported(mContext));
         mIsHideWatchedFromWatchLaterEnabled = Helpers.parseBoolean(split, 61, false);
         mRememberPinnedPosition = Helpers.parseBoolean(split, 62, false);
+        mSelectedVideos = Helpers.parseList(split, 63, Video::fromString);
 
         if (pinnedItems != null && !pinnedItems.isEmpty()) {
+            mPinnedItems.clear();
             String[] pinnedItemsArr = Helpers.splitArray(pinnedItems);
 
             for (String pinnedItem : pinnedItemsArr) {
@@ -1034,17 +1037,8 @@ public class GeneralData implements ProfileChangeListener {
             initPinnedItems();
         }
 
-        if (playlistOrder != null && !playlistOrder.isEmpty()) {
-            mPlaylistOrder.clear();
-            String[] playlistOrderArr = Helpers.splitArray(playlistOrder);
-
-            for (String playlistOrderItem : playlistOrderArr) {
-                String[] keyValPair = playlistOrderItem.split("\\|");
-                mPlaylistOrder.put(keyValPair[0], Integer.parseInt(keyValPair[1]));
-            }
-        }
-
         if (pendingStreams != null && !pendingStreams.isEmpty()) {
+            mPendingStreams.clear();
             String[] pendingStreamsArr = Helpers.splitArray(pendingStreams);
             for (String pendingStream : pendingStreamsArr) {
                 mPendingStreams.add(Video.fromString(pendingStream));
@@ -1066,26 +1060,21 @@ public class GeneralData implements ProfileChangeListener {
     }
 
     private void persistState() {
-        List<String> playlistOrderPairs = new ArrayList<>();
-        for (Entry<String, Integer> pair : mPlaylistOrder.entrySet()) {
-            playlistOrderPairs.add(String.format("%s|%s", pair.getKey(), pair.getValue()));
-        }
-        String playlistOrder = Helpers.mergeList(playlistOrderPairs);
         // Zero index is skipped. Selected sections were there.
-        mPrefs.setProfileData(GENERAL_DATA, Helpers.mergeData(null, mBootSectionId, mIsSettingsSectionEnabled, mAppExitShortcut, mIsPlayerOnlyModeEnabled, mBackgroundShortcut, Helpers.mergeList(mPinnedItems), mIsHideShortsFromSubscriptionsEnabled,
-                mIsRemapFastForwardToNextEnabled, null,
-                mIsProxyEnabled, mIsBridgeCheckEnabled, mIsOkButtonLongPressDisabled, mLastPlaylistId,
+        mPrefs.setProfileData(GENERAL_DATA, Helpers.mergeData(null, mBootSectionId, mIsSettingsSectionEnabled, mAppExitShortcut,
+                mIsPlayerOnlyModeEnabled, mBackgroundShortcut, mPinnedItems, mIsHideShortsFromSubscriptionsEnabled,
+                mIsRemapFastForwardToNextEnabled, null, mIsProxyEnabled, mIsBridgeCheckEnabled, mIsOkButtonLongPressDisabled, mLastPlaylistId,
                 null, mIsHideUpcomingEnabled, mIsRemapPageUpToNextEnabled, mIsRemapPageUpToLikeEnabled,
                 mIsRemapChannelUpToNextEnabled, mIsRemapChannelUpToLikeEnabled, mIsRemapPageUpToSpeedEnabled,
                 mIsRemapChannelUpToSpeedEnabled, mIsRemapFastForwardToSpeedEnabled, mIsRemapChannelUpToSearchEnabled,
                 mIsHideShortsFromHomeEnabled, mIsHideShortsFromHistoryEnabled, mIsScreensaverDisabled, mIsVPNEnabled, mLastPlaylistTitle,
-                playlistOrder, Helpers.mergeList(mPendingStreams), mIsGlobalClockEnabled, mTimeFormat, mSettingsPassword, mIsChildModeEnabled, mIsHistoryEnabled,
+                mPlaylistOrder, mPendingStreams, mIsGlobalClockEnabled, mTimeFormat, mSettingsPassword, mIsChildModeEnabled, mIsHistoryEnabled,
                 mScreensaverTimeoutMs, null, mIsAltAppIconEnabled, mVersionCode, mIsSelectChannelSectionEnabled, mMasterPassword,
                 mIsOldHomeLookEnabled, mIsOldUpdateNotificationsEnabled, mScreensaverDimmingPercents, mIsRemapNextToSpeedEnabled, mIsRemapPlayToOKEnabled, mHistoryState,
                 mRememberSubscriptionsPosition, Helpers.toString(mSelectedSubscriptionsItem),
                 mIsRemapNumbersToSpeedEnabled, mIsRemapDpadUpToSpeedEnabled, mIsRemapChannelUpToVolumeEnabled, mIsRemapDpadUpToVolumeEnabled,
-                mIsRemapDpadLeftToVolumeEnabled, mIsRemapNextToFastForwardEnabled, mIsHideWatchedFromNotificationsEnabled, Helpers.mergeList(mChangelog), mPlayerExitShortcut,
-                mIsOldChannelLookEnabled, mIsFullscreenModeEnabled, mIsHideWatchedFromWatchLaterEnabled, mRememberPinnedPosition));
+                mIsRemapDpadLeftToVolumeEnabled, mIsRemapNextToFastForwardEnabled, mIsHideWatchedFromNotificationsEnabled, mChangelog, mPlayerExitShortcut,
+                mIsOldChannelLookEnabled, mIsFullscreenModeEnabled, mIsHideWatchedFromWatchLaterEnabled, mRememberPinnedPosition, mSelectedVideos));
     }
 
     private int getSectionId(Video item) {
