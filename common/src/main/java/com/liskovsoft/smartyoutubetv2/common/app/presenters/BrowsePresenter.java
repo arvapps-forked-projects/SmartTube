@@ -151,6 +151,16 @@ public class BrowsePresenter extends BasePresenter<BrowseView> implements Sectio
     private void saveSelectedItems() {
         if (mCurrentVideo != null && mCurrentVideo.belongsToSubscriptions() && mGeneralData.isRememberSubscriptionsPositionEnabled()) {
             mGeneralData.setSelectedSubscriptionsItem(mCurrentVideo);
+        } else if (mCurrentVideo != null && mCurrentVideo.sectionId == -1 && mGeneralData.isRememberPinnedPositionEnabled()) {
+            mGeneralData.setSelectedItem(mCurrentSection.getId(), mCurrentVideo);
+        }
+    }
+
+    private void restoreSelectedItems() {
+        if (isSubscriptionsSection() && mGeneralData.isRememberSubscriptionsPositionEnabled()) {
+            getView().selectSectionItem(mGeneralData.getSelectedSubscriptionsItem());
+        } else if (isPinnedSection() && mGeneralData.isRememberPinnedPositionEnabled()) {
+            getView().selectSectionItem(mGeneralData.getSelectedItem(mCurrentSection.getId()));
         }
     }
 
@@ -427,8 +437,10 @@ public class BrowsePresenter extends BasePresenter<BrowseView> implements Sectio
 
     @Override
     public void onSectionFocused(int sectionId) {
-        saveSelectedItems();
-        updateSection(sectionId);
+        saveSelectedItems(); // save previous state
+        mCurrentSection = findSectionById(sectionId);
+        mCurrentVideo = null; // fast scroll through the sections (fix empty selected item)
+        updateCurrentSection();
     }
 
     @Override
@@ -522,6 +534,7 @@ public class BrowsePresenter extends BasePresenter<BrowseView> implements Sectio
 
     public void unpinItem(Video item) {
         mGeneralData.removePinnedItem(item);
+        mGeneralData.removeSelectedItem(item.hashCode());
 
         BrowseSection section = null;
 
@@ -551,11 +564,9 @@ public class BrowsePresenter extends BasePresenter<BrowseView> implements Sectio
     }
 
     public void refresh(boolean focusOnContent) {
-        if (mCurrentSection != null) {
-            updateSection(mCurrentSection.getId());
-            if (focusOnContent && getView() != null) {
-                getView().focusOnContent();
-            }
+        updateCurrentSection();
+        if (focusOnContent && getView() != null) {
+            getView().focusOnContent();
         }
     }
 
@@ -563,10 +574,8 @@ public class BrowsePresenter extends BasePresenter<BrowseView> implements Sectio
         mLastUpdateTimeMs = System.currentTimeMillis();
     }
 
-    private void updateSection(int sectionId) {
+    private void updateCurrentSection() {
         disposeActions();
-
-        mCurrentSection = findSectionById(sectionId);
 
         if (getView() == null || mCurrentSection == null) {
             return;
@@ -703,9 +712,7 @@ public class BrowsePresenter extends BasePresenter<BrowseView> implements Sectio
             return;
         }
 
-        if (isSubscriptionsSection() && mGeneralData.isRememberSubscriptionsPositionEnabled()) {
-            getView().selectSectionItem(mGeneralData.getSelectedSubscriptionsItem());
-        }
+        restoreSelectedItems();
 
         Disposable updateAction = group
                 .subscribe(
@@ -991,6 +998,10 @@ public class BrowsePresenter extends BasePresenter<BrowseView> implements Sectio
 
     public boolean isSubscriptionsSection() {
         return isSection(MediaGroup.TYPE_SUBSCRIPTIONS);
+    }
+
+    public boolean isPinnedSection() {
+        return mCurrentSection != null && mCurrentSection.getId() > 100;
     }
 
     private boolean isSection(int sectionId) {
