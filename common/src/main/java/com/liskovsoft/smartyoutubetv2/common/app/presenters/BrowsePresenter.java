@@ -149,17 +149,19 @@ public class BrowsePresenter extends BasePresenter<BrowseView> implements Sectio
     }
 
     private void saveSelectedItems() {
-        if (mCurrentVideo != null && mCurrentVideo.belongsToSubscriptions() && mGeneralData.isRememberSubscriptionsPositionEnabled()) {
-            mGeneralData.setSelectedSubscriptionsItem(mCurrentVideo);
-        } else if (mCurrentVideo != null && mCurrentVideo.sectionId == -1 && mGeneralData.isRememberPinnedPositionEnabled()) {
+        if (mCurrentVideo != null && mCurrentVideo.getPositionInsideGroup() == 0) { // fix position reset when jumping between sections
+            return;
+        }
+
+        if ((isSubscriptionsSection() && mGeneralData.isRememberSubscriptionsPositionEnabled()) ||
+                (isPinnedSection() && mGeneralData.isRememberPinnedPositionEnabled())) {
             mGeneralData.setSelectedItem(mCurrentSection.getId(), mCurrentVideo);
         }
     }
 
     private void restoreSelectedItems() {
-        if (isSubscriptionsSection() && mGeneralData.isRememberSubscriptionsPositionEnabled()) {
-            getView().selectSectionItem(mGeneralData.getSelectedSubscriptionsItem());
-        } else if (isPinnedSection() && mGeneralData.isRememberPinnedPositionEnabled()) {
+        if ((isSubscriptionsSection() && mGeneralData.isRememberSubscriptionsPositionEnabled()) ||
+                (isPinnedSection() && mGeneralData.isRememberPinnedPositionEnabled())) {
             getView().selectSectionItem(mGeneralData.getSelectedItem(mCurrentSection.getId()));
         }
     }
