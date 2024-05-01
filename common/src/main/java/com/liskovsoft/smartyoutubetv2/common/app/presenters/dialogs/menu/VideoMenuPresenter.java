@@ -40,7 +40,7 @@ import java.util.Map;
 
 public class VideoMenuPresenter extends BaseMenuPresenter {
     private static final String TAG = VideoMenuPresenter.class.getSimpleName();
-    private final MediaItemService mItemManager;
+    private final MediaItemService mMediaItemService;
     private final AppDialogPresenter mDialogPresenter;
     private final MediaServiceManager mServiceManager;
     private Disposable mAddToPlaylistAction;
@@ -109,7 +109,7 @@ public class VideoMenuPresenter extends BaseMenuPresenter {
     private VideoMenuPresenter(Context context) {
         super(context);
         MotherService service = YouTubeMotherService.instance();
-        mItemManager = service.getMediaItemService();
+        mMediaItemService = service.getMediaItemService();
         mServiceManager = MediaServiceManager.instance();
         mDialogPresenter = AppDialogPresenter.instance(context);
 
@@ -145,8 +145,6 @@ public class VideoMenuPresenter extends BaseMenuPresenter {
             return;
         }
 
-        RxHelper.disposeActions(mAddToPlaylistAction, mNotInterestedAction, mSubscribeAction);
-
         mVideo = video;
         sVideoHolder = new WeakReference<>(video);
 
@@ -157,7 +155,7 @@ public class VideoMenuPresenter extends BaseMenuPresenter {
         mPlaylistInfos = null;
         RxHelper.disposeActions(mPlaylistsInfoAction);
         if (isAddToRecentPlaylistButtonEnabled()) {
-            mPlaylistsInfoAction = mItemManager.getPlaylistsInfoObserve(mVideo.videoId)
+            mPlaylistsInfoAction = mMediaItemService.getPlaylistsInfoObserve(mVideo.videoId)
                     .subscribe(
                             videoPlaylistInfos -> {
                                 mPlaylistInfos = videoPlaylistInfos;
@@ -396,9 +394,11 @@ public class VideoMenuPresenter extends BaseMenuPresenter {
             return;
         }
 
+        RxHelper.disposeActions(mNotInterestedAction);
+
         mDialogPresenter.appendSingleButton(
                 UiOptionItem.from(getContext().getString(R.string.not_interested), optionItem -> {
-                    mNotInterestedAction = mItemManager.markAsNotInterestedObserve(mVideo.mediaItem.getFeedbackToken())
+                    mNotInterestedAction = mMediaItemService.markAsNotInterestedObserve(mVideo.mediaItem.getFeedbackToken())
                             .subscribe(
                                     var -> {},
                                     error -> Log.e(TAG, "Mark as 'not interested' error: %s", error.getMessage()),
@@ -423,9 +423,11 @@ public class VideoMenuPresenter extends BaseMenuPresenter {
             return;
         }
 
+        RxHelper.disposeActions(mNotInterestedAction);
+
         mDialogPresenter.appendSingleButton(
                 UiOptionItem.from(getContext().getString(R.string.not_recommend_channel), optionItem -> {
-                    mNotInterestedAction = mItemManager.markAsNotInterestedObserve(mVideo.mediaItem.getFeedbackToken2())
+                    mNotInterestedAction = mMediaItemService.markAsNotInterestedObserve(mVideo.mediaItem.getFeedbackToken2())
                             .subscribe(
                                     var -> {},
                                     error -> Log.e(TAG, "Mark as 'not interested' error: %s", error.getMessage()),
@@ -450,9 +452,11 @@ public class VideoMenuPresenter extends BaseMenuPresenter {
             return;
         }
 
+        RxHelper.disposeActions(mNotInterestedAction);
+
         mDialogPresenter.appendSingleButton(
                 UiOptionItem.from(getContext().getString(R.string.remove_from_history), optionItem -> {
-                    mNotInterestedAction = mItemManager.markAsNotInterestedObserve(mVideo.mediaItem.getFeedbackToken())
+                    mNotInterestedAction = mMediaItemService.markAsNotInterestedObserve(mVideo.mediaItem.getFeedbackToken())
                             .subscribe(
                                     var -> {},
                                     error -> Log.e(TAG, "Remove from history error: %s", error.getMessage()),
@@ -478,9 +482,11 @@ public class VideoMenuPresenter extends BaseMenuPresenter {
             return;
         }
 
+        RxHelper.disposeActions(mNotInterestedAction);
+
         mDialogPresenter.appendSingleButton(
                 UiOptionItem.from(getContext().getString(R.string.remove_from_subscriptions), optionItem -> {
-                    mNotInterestedAction = mItemManager.markAsNotInterestedObserve(mVideo.mediaItem.getFeedbackToken())
+                    mNotInterestedAction = mMediaItemService.markAsNotInterestedObserve(mVideo.mediaItem.getFeedbackToken())
                             .subscribe(
                                     var -> {},
                                     error -> Log.e(TAG, "Remove from subscriptions error: %s", error.getMessage()),
@@ -795,8 +801,9 @@ public class VideoMenuPresenter extends BaseMenuPresenter {
     }
 
     private void addRemoveFromPlaylist(String playlistId, String playlistTitle, boolean add) {
+        RxHelper.disposeActions(mAddToPlaylistAction);
         if (add) {
-            Observable<Void> editObserve = mItemManager.addToPlaylistObserve(playlistId, mVideo.videoId);
+            Observable<Void> editObserve = mMediaItemService.addToPlaylistObserve(playlistId, mVideo.videoId);
             // Handle error: Maximum playlist size exceeded (> 5000 items)
             mAddToPlaylistAction = RxHelper.execute(editObserve, error -> MessageHelpers.showLongMessage(getContext(), error.getMessage()));
             mDialogPresenter.closeDialog();
@@ -807,7 +814,7 @@ public class VideoMenuPresenter extends BaseMenuPresenter {
             if (mCallback != null && Helpers.equals(mVideo.playlistId, playlistId)) {
                 mCallback.onItemAction(mVideo, VideoMenuCallback.ACTION_REMOVE_FROM_PLAYLIST);
             }
-            Observable<Void> editObserve = mItemManager.removeFromPlaylistObserve(playlistId, mVideo.videoId);
+            Observable<Void> editObserve = mMediaItemService.removeFromPlaylistObserve(playlistId, mVideo.videoId);
             mAddToPlaylistAction = RxHelper.execute(editObserve);
             mDialogPresenter.closeDialog();
             MessageHelpers.showMessage(getContext(),
@@ -865,8 +872,10 @@ public class VideoMenuPresenter extends BaseMenuPresenter {
             return;
         }
 
+        RxHelper.disposeActions(mSubscribeAction);
+
         Observable<Void> observable = video.isSubscribed ?
-                mItemManager.unsubscribeObserve(video.channelId) : mItemManager.subscribeObserve(video.channelId);
+                mMediaItemService.unsubscribeObserve(video.channelId) : mMediaItemService.subscribeObserve(video.channelId);
 
         mSubscribeAction = RxHelper.execute(observable);
 
