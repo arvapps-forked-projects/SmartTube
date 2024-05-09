@@ -34,7 +34,7 @@ public class CloudBackupSettingsPresenter extends BasePresenter<Void> {
     private CloudBackupSettingsPresenter(Context context) {
         super(context);
         mSignInService = GoogleSignInService.instance();
-        mBackupManager = new GDriveBackupManager(context);
+        mBackupManager = GDriveBackupManager.instance(context);
     }
 
     public static CloudBackupSettingsPresenter instance(Context context) {
@@ -64,11 +64,16 @@ public class CloudBackupSettingsPresenter extends BasePresenter<Void> {
     private void createAndShowDialog(List<Account> accounts) {
         AppDialogPresenter settingsPresenter = AppDialogPresenter.instance(getContext());
 
-        appendSelectAccountSection(accounts, settingsPresenter);
-        appendAddAccountButton(settingsPresenter);
-        appendRemoveAccountSection(accounts, settingsPresenter);
-        appendBackupSettings(settingsPresenter);
-        appendRestoreSettings(settingsPresenter);
+        settingsPresenter.appendSingleButton(UiOptionItem.from("Google Drive", optionItem -> {
+            AppDialogPresenter settingsPresenter2 = AppDialogPresenter.instance(getContext());
+            appendBackupSettings(settingsPresenter2);
+            appendRestoreSettings(settingsPresenter2);
+            appendAddAccountButton(settingsPresenter2);
+            // NOTE: google account doesn't have a name or email
+            //appendRemoveAccountSection(accounts, settingsPresenter2);
+            //appendSelectAccountSection(accounts, settingsPresenter2);
+            settingsPresenter2.showDialog("Google Drive");
+        }));
 
         settingsPresenter.showDialog(getContext().getString(R.string.app_backup_restore), this::unhold);
     }
@@ -102,7 +107,7 @@ public class CloudBackupSettingsPresenter extends BasePresenter<Void> {
             }
         }
 
-        settingsPresenter.appendRadioCategory("Google Drive: " + getContext().getString(R.string.dialog_account_list) + accountName, optionItems);
+        settingsPresenter.appendRadioCategory(getContext().getString(R.string.dialog_account_list) + accountName, optionItems);
     }
 
     private void appendRemoveAccountSection(List<Account> accounts, AppDialogPresenter settingsPresenter) {
@@ -124,20 +129,20 @@ public class CloudBackupSettingsPresenter extends BasePresenter<Void> {
             ));
         }
 
-        settingsPresenter.appendStringsCategory("Google Drive: " + getContext().getString(R.string.dialog_remove_account), optionItems);
+        settingsPresenter.appendStringsCategory(getContext().getString(R.string.dialog_remove_account), optionItems);
     }
 
     private void appendRestoreSettings(AppDialogPresenter settingsPresenter) {
-        settingsPresenter.appendSingleButton(UiOptionItem.from("Google Drive: " + getContext().getString(R.string.app_restore), optionItem -> mBackupManager.restore()));
+        settingsPresenter.appendSingleButton(UiOptionItem.from(getContext().getString(R.string.app_restore), optionItem -> mBackupManager.restore()));
     }
 
     private void appendBackupSettings(AppDialogPresenter settingsPresenter) {
-        settingsPresenter.appendSingleButton(UiOptionItem.from("Google Drive: " + getContext().getString(R.string.app_backup), optionItem -> mBackupManager.backup()));
+        settingsPresenter.appendSingleButton(UiOptionItem.from(getContext().getString(R.string.app_backup), optionItem -> mBackupManager.backup()));
     }
 
     private void appendAddAccountButton(AppDialogPresenter settingsPresenter) {
         settingsPresenter.appendSingleButton(UiOptionItem.from(
-                "Google Drive: " + getContext().getString(R.string.dialog_add_account), option -> GoogleSignInPresenter.instance(getContext()).start()));
+                getContext().getString(R.string.dialog_add_account), option -> GoogleSignInPresenter.instance(getContext()).start()));
     }
 
     private String getFullName(Account account) {
