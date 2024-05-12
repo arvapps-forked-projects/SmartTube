@@ -98,10 +98,10 @@ public class ContentBlockController extends PlayerEventListenerHelper {
     public void onVideoLoaded(Video item) {
         disposeActions();
 
-        boolean enabled = mContentBlockData.isSponsorBlockEnabled();
+        boolean enabled = mContentBlockData.isSponsorBlockEnabled() && checkVideo(item) && !isChannelExcluded(item.channelId);
         getPlayer().setButtonState(R.id.action_content_block, enabled ? PlayerUI.BUTTON_ON : PlayerUI.BUTTON_OFF);
 
-        if (enabled && checkVideo(item) && !isChannelExcluded(item.channelId)) {
+        if (enabled) {
             updateSponsorSegmentsAndWatch(item);
         }
     }
@@ -126,23 +126,31 @@ public class ContentBlockController extends PlayerEventListenerHelper {
     @Override
     public void onButtonClicked(int buttonId, int buttonState) {
         if (buttonId == R.id.action_content_block) {
-            boolean enabled = buttonState == PlayerUI.BUTTON_ON;
+            List<SponsorSegment> foundSegments = findMatchedSegments(getPlayer().getPositionMs(), mOriginalSegments);
 
-            mSkipExclude = !enabled;
-
-            Video video = getPlayer().getVideo();
-
-            if (video != null && video.hasChannel()) {
-                if (enabled) {
-                    mContentBlockData.excludeChannel(video.channelId);
-                } else {
-                    mContentBlockData.stopExcludingChannel(video.channelId);
-                }
-            } else {
-                mContentBlockData.enableSponsorBlock(!enabled);
+            if (foundSegments != null) {
+                SponsorSegment lastSegment = foundSegments.get(foundSegments.size() - 1);
+                setPositionMs(lastSegment.getEndMs());
+                return;
             }
 
-            onVideoLoaded(video);
+            //boolean enabled = buttonState == PlayerUI.BUTTON_ON;
+            //
+            //mSkipExclude = !enabled;
+            //
+            //Video video = getPlayer().getVideo();
+            //
+            //if (video != null && video.hasChannel()) {
+            //    if (enabled) {
+            //        mContentBlockData.excludeChannel(video.channelId);
+            //    } else {
+            //        mContentBlockData.stopExcludingChannel(video.channelId);
+            //    }
+            //} else {
+            //    mContentBlockData.enableSponsorBlock(!enabled);
+            //}
+            //
+            //onVideoLoaded(video);
         }
     }
 
@@ -235,13 +243,13 @@ public class ContentBlockController extends PlayerEventListenerHelper {
 
         long positionMs = getPlayer().getPositionMs();
 
-        List<SponsorSegment> foundSegment = findMatchedSegments(positionMs);
+        List<SponsorSegment> foundSegments = findMatchedSegments(positionMs, mActiveSegments);
 
-        applyActions(foundSegment);
+        applyActions(foundSegments);
 
         // Skip each segment only once
-        if (foundSegment != null && mContentBlockData.isDontSkipSegmentAgainEnabled()) {
-            mActiveSegments.removeAll(foundSegment);
+        if (foundSegments != null && mContentBlockData.isDontSkipSegmentAgainEnabled()) {
+            mActiveSegments.removeAll(foundSegments);
         }
     }
 
@@ -338,14 +346,14 @@ public class ContentBlockController extends PlayerEventListenerHelper {
         getPlayer().setPositionMs(Math.min(positionMs, durationMs));
     }
 
-    private List<SponsorSegment> findMatchedSegments(long positionMs) {
-        if (mActiveSegments == null) {
+    private List<SponsorSegment> findMatchedSegments(long positionMs, List<SponsorSegment> segments) {
+        if (segments == null) {
             return null;
         }
 
         List<SponsorSegment> foundSegment = null;
 
-        for (SponsorSegment segment : mActiveSegments) {
+        for (SponsorSegment segment : segments) {
             int action = mContentBlockData.getAction(segment.getCategory());
             boolean isSkipAction = action == ContentBlockData.ACTION_SKIP_ONLY ||
                     action == ContentBlockData.ACTION_SKIP_WITH_TOAST;
@@ -370,12 +378,12 @@ public class ContentBlockController extends PlayerEventListenerHelper {
         return foundSegment;
     }
 
-    private void applyActions(List<SponsorSegment> foundSegment) {
-        if (foundSegment != null) {
-            SponsorSegment lastSegment = foundSegment.get(foundSegment.size() - 1);
+    private void applyActions(List<SponsorSegment> foundSegments) {
+        if (foundSegments != null) {
+            SponsorSegment lastSegment = foundSegments.get(foundSegments.size() - 1);
 
             Integer resId = mContentBlockData.getLocalizedRes(lastSegment.getCategory());
-            String localizedCategory = resId != null ? getContext().getString(resId) : lastSegment.getCategory();
+            String skipMessage = resId != null ? getContext().getString(resId) : lastSegment.getCategory();
 
             int type = mContentBlockData.getAction(lastSegment.getCategory());
 
@@ -384,13 +392,13 @@ public class ContentBlockController extends PlayerEventListenerHelper {
             if (type == ContentBlockData.ACTION_SKIP_ONLY || getPlayer().isInPIPMode() || Utils.isScreenOff(getContext())) {
                 simpleSkip(skipPosMs);
             } else if (type == ContentBlockData.ACTION_SKIP_WITH_TOAST) {
-                messageSkip(skipPosMs, localizedCategory);
+                messageSkip(skipPosMs, skipMessage);
             } else if (type == ContentBlockData.ACTION_SHOW_DIALOG) {
-                confirmSkip(skipPosMs, localizedCategory);
+                confirmSkip(skipPosMs, skipMessage);
             }
         }
 
-        mLastSkipPosMs = foundSegment != null ? foundSegment.get(foundSegment.size() - 1).getEndMs() : 0;
+        mLastSkipPosMs = foundSegments != null ? foundSegments.get(foundSegments.size() - 1).getEndMs() : 0;
     }
 
     private void closeTransparentDialog() {

@@ -71,7 +71,12 @@ public class SignInFragment extends GuidedStepSupportFragment implements SignInV
                 .listener(mErrorListener)
                 .into(getGuidanceStylist().getIconView());
 
-        getGuidanceStylist().getDescriptionView().setText(getString(R.string.signin_view_description, signInUrl));
+        String description = getString(R.string.signin_view_description, signInUrl);
+        int start = description.indexOf(signInUrl);
+        int end = start + signInUrl.length();
+        CharSequence coloredDescription = Utils.color(description, ContextCompat.getColor(getContext(), R.color.red), start, end);
+
+        getGuidanceStylist().getDescriptionView().setText(coloredDescription);
     }
 
     @Override
@@ -106,7 +111,9 @@ public class SignInFragment extends GuidedStepSupportFragment implements SignInV
         if (action.getId() == CONTINUE) {
             mSignInPresenter.onActionClicked();
         } else if (action.getId() == OPEN_BROWSER) {
-            Utils.openLinkExt(getContext(), mFullSignInUrl);
+            if (mFullSignInUrl != null) {
+                Utils.openLinkExt(getContext(), mFullSignInUrl);
+            }
         }
     }
 
