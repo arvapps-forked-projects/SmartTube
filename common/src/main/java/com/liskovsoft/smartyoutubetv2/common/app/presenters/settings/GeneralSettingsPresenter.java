@@ -459,8 +459,8 @@ public class GeneralSettingsPresenter extends BasePresenter<Void> {
         List<OptionItem> options = new ArrayList<>();
 
         options.add(UiOptionItem.from(getContext().getString(R.string.return_to_launcher),
-                option -> mGeneralData.enablePlayerOnlyMode(option.isSelected()),
-                mGeneralData.isPlayerOnlyModeEnabled()));
+                option -> mGeneralData.enableReturnToLauncher(option.isSelected()),
+                mGeneralData.isReturnToLauncherEnabled()));
 
         options.add(UiOptionItem.from(getContext().getString(R.string.multi_profiles),
                 option -> {
@@ -556,7 +556,7 @@ public class GeneralSettingsPresenter extends BasePresenter<Void> {
                 option -> mGeneralData.enableSelectChannelSection(option.isSelected()),
                 mGeneralData.isSelectChannelSectionEnabled()));
 
-        options.add(UiOptionItem.from(getContext().getString(R.string.player_show_tooltips) + ": " + getContext().getString(R.string.long_press_for_settings),
+        options.add(UiOptionItem.from(getContext().getString(R.string.player_show_tooltips) + ": " + getContext().getString(R.string.long_press_for_options),
                 option -> {
                     mGeneralData.enableFirstUseTooltip(option.isSelected());
                     mRestartApp = true;
