@@ -49,7 +49,11 @@ public class GDriveBackupWorker extends Worker {
     }
 
     public static void forceSchedule(Context context) {
+        // get local id
+        String id = GeneralData.instance(context).getUniqueId();
 
+        // then persist id to gdrive
+        // then run schedule
     }
 
     public static void cancel(Context context) {
@@ -73,6 +77,11 @@ public class GDriveBackupWorker extends Worker {
     }
 
     private void checkedRunTask(Runnable task) {
-        
+        // get local id
+        String id = GeneralData.instance(getApplicationContext()).getUniqueId();
+
+        // get id form gdrive
+        // then compare with local id
+        // then run work if id match
     }
 }
