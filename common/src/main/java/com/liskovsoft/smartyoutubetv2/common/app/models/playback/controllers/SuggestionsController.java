@@ -304,7 +304,8 @@ public class SuggestionsController extends PlayerEventListenerHelper {
 
         appendChaptersIfNeeded(mediaItemMetadata);
 
-        appendUserQueueIfNeeded(video);
+        mergeUserAndRemoteQueueIfNeeded(video, mediaItemMetadata);
+        appendUserQueueIfNeeded();
 
         appendSectionPlaylistIfNeeded(video);
 
@@ -333,9 +334,9 @@ public class SuggestionsController extends PlayerEventListenerHelper {
             if (group != null && !group.isEmpty()) {
                 VideoGroup videoGroup = VideoGroup.from(group);
 
-                if (groupIndex == 0) {
-                    mergeRemoteAndUserQueueIfNeeded(video, videoGroup);
-                }
+                //if (groupIndex == 0) {
+                //    mergeRemoteAndUserQueueIfNeeded(video, videoGroup);
+                //}
 
                 getPlayer().updateSuggestions(videoGroup);
                 mDeArrowProcessor.process(videoGroup);
@@ -352,21 +353,43 @@ public class SuggestionsController extends PlayerEventListenerHelper {
     /**
      * Merge remote queue with player's queue (when phone cast just started or user clicked on playlist item)
      */
-    private void mergeRemoteAndUserQueueIfNeeded(Video video, VideoGroup remoteGroup) {
-        // NOTE: Commented out section below has risk of adding random videos into the queue
-        //if (video.isRemote && (video.remotePlaylistId != null || !Playlist.instance().hasNext())) {
-        if (video.isRemote && video.remotePlaylistId != null) {
-            remoteGroup.removeAllBefore(video);
+    private void mergeUserAndRemoteQueueIfNeeded(Video video, MediaItemMetadata metadata) {
+        if (video.isRemote && (video.playlistId != null || video.remotePlaylistId != null)) {
+            // Create user queue from remote queue
 
-            remoteGroup.setTitle(getContext().getString(R.string.action_playback_queue));
-            remoteGroup.setId(remoteGroup.getTitle().hashCode());
+            List<MediaGroup> suggestions = metadata.getSuggestions();
 
-            Playlist.instance().removeAllAfterCurrent();
-            Playlist.instance().addAll(remoteGroup.getVideos());
-            Playlist.instance().setCurrent(video);
-        } else if (video.isRemote) {
-            // Double queue bugfix. Remove remote queue. Remain only user queue (should already be merged with remote).
-            remoteGroup.clear();
+            if (suggestions != null && !suggestions.isEmpty()) {
+                MediaGroup remoteRow = suggestions.get(0);
+
+                VideoGroup remoteGroup = VideoGroup.from(remoteRow);
+
+                if (remoteGroup.contains(video)) {
+                    suggestions.remove(remoteRow);
+
+                    remoteGroup.removeAllBefore(video);
+                    remoteGroup.stripPlaylistInfo(); // use user queue even when a phone disconnected
+
+                    Playlist playlist = Playlist.instance();
+                    playlist.removeAllAfterCurrent();
+                    playlist.addAll(remoteGroup.getVideos());
+                    playlist.setCurrent(video);
+                }
+            }
+        }
+    }
+
+    private void appendUserQueueIfNeeded() {
+        Playlist playlist = Playlist.instance();
+
+        if (playlist.hasNext()) {
+            List<Video> queue = playlist.getAllAfterCurrent();
+
+            VideoGroup videoGroup = VideoGroup.from(queue);
+            videoGroup.setTitle(getContext().getString(R.string.action_playback_queue));
+            videoGroup.setId(videoGroup.getTitle().hashCode());
+
+            getPlayer().updateSuggestions(videoGroup);
         }
     }
 
@@ -419,20 +442,6 @@ public class SuggestionsController extends PlayerEventListenerHelper {
         appendChapterSuggestionsIfNeeded();
         startChapterNotificationServiceIfNeeded();
         focusCurrentChapter();
-    }
-
-    private void appendUserQueueIfNeeded(Video video) {
-        // Exclude situations when phone cast just started or next item is null
-        if ((video.isRemote && video.remotePlaylistId != null) || !Playlist.instance().hasNext()) {
-            return;
-        }
-
-        List<Video> queue = Playlist.instance().getAllAfterCurrent();
-
-        VideoGroup videoGroup = VideoGroup.from(queue);
-        videoGroup.setTitle(getContext().getString(R.string.action_playback_queue));
-        videoGroup.setId(videoGroup.getTitle().hashCode());
-        getPlayer().updateSuggestions(videoGroup);
     }
 
     private void appendSectionPlaylistIfNeeded(Video video) {
