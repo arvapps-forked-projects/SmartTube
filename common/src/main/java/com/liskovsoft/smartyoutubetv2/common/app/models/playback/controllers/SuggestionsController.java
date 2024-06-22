@@ -348,7 +348,8 @@ public class SuggestionsController extends PlayerEventListenerHelper {
      * Merge remote queue with player's queue (when phone cast just started or user clicked on playlist item)
      */
     private void mergeUserAndRemoteQueueIfNeeded(Video video, MediaItemMetadata metadata) {
-        if (video.isRemote && video.remotePlaylistId != null) { // ensure the user pressed video thumb on the phone
+        // Ensure that the user pressed video thumb on the phone
+        if (video.isRemote && video.remotePlaylistId != null) {
             // Create user queue from remote queue
 
             List<MediaGroup> suggestions = metadata.getSuggestions();
@@ -358,23 +359,9 @@ public class SuggestionsController extends PlayerEventListenerHelper {
 
                 VideoGroup remoteGroup = VideoGroup.from(remoteRow);
 
-                if (remoteGroup.contains(video)) {
-                    suggestions.remove(remoteRow);
+                suggestions.remove(remoteRow);
 
-                    remoteGroup.removeAllBefore(video);
-                    remoteGroup.stripPlaylistInfo(); // prefer user queue even when a phone disconnected
-
-                    Playlist playlist = Playlist.instance();
-                    playlist.removeAllAfterCurrent();
-                    playlist.addAll(remoteGroup.getVideos());
-                    playlist.setCurrent(video);
-
-                    remoteGroup.setTitle(getContext().getString(R.string.action_playback_queue));
-                    remoteGroup.setId(remoteGroup.getTitle().hashCode());
-                    remoteGroup.isQueue = true;
-
-                    getPlayer().updateSuggestions(remoteGroup);
-                }
+                appendRemoteQueueIfNeeded(video, remoteGroup);
             }
         } else {
             appendUserQueueIfNeeded();
@@ -400,6 +387,27 @@ public class SuggestionsController extends PlayerEventListenerHelper {
             videoGroup.setId(videoGroup.getTitle().hashCode());
 
             getPlayer().updateSuggestions(videoGroup);
+        }
+    }
+
+    private void appendRemoteQueueIfNeeded(Video video, VideoGroup remoteGroup) {
+        remoteGroup.removeAllBefore(video);
+        remoteGroup.stripPlaylistInfo(); // prefer user queue even when a phone disconnected
+
+        Playlist playlist = Playlist.instance();
+        playlist.removeAllAfterCurrent();
+        playlist.addAll(remoteGroup.getVideos());
+        playlist.setCurrent(video);
+
+        remoteGroup.setTitle(getContext().getString(R.string.action_playback_queue));
+        remoteGroup.setId(remoteGroup.getTitle().hashCode());
+        remoteGroup.isQueue = true;
+
+        remoteGroup.setAction(VideoGroup.ACTION_REPLACE);
+        getPlayer().updateSuggestions(remoteGroup);
+
+        if (!remoteGroup.contains(video) && remoteGroup.getSize() < 100) {
+            continueGroup(remoteGroup, group -> appendRemoteQueueIfNeeded(video, group), false);
         }
     }
 
