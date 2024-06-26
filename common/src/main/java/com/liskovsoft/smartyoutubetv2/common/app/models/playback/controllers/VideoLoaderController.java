@@ -497,7 +497,7 @@ public class VideoLoaderController extends PlayerEventListenerHelper implements 
 
         switch (repeatMode) {
             case PlayerEngineConstants.REPEAT_MODE_REVERSE_LIST:
-                if (video.hasPlaylist()) {
+                if (video.hasPlaylist() || video.belongsToChannelUploads() || video.belongsToChannel()) {
                     onPreviousClicked();
                     break;
                 }
@@ -513,8 +513,12 @@ public class VideoLoaderController extends PlayerEventListenerHelper implements 
                 // Except when playing from queue
                 if (mPlaylist.getNext() != null) {
                     loadNext();
-                } else if (!getPlayer().isSuggestionsShown() && !AppDialogPresenter.instance(getContext()).isDialogShown()) {
-                    getPlayer().finishReally();
+                } else {
+                    AppDialogPresenter dialog = AppDialogPresenter.instance(getContext());
+                    if (!getPlayer().isSuggestionsShown() && (!dialog.isDialogShown() || dialog.isTransparent())) {
+                        dialog.closeDialog();
+                        getPlayer().finishReally();
+                    }
                 }
                 break;
             case PlayerEngineConstants.REPEAT_MODE_PAUSE:
