@@ -491,12 +491,14 @@ public class TrackSelectorManager implements TrackSelectorCallback {
         Renderer renderer = mRenderers[originTrack.rendererIndex];
 
         MediaTrack result = createAutoSelection(originTrack.rendererIndex);
+        MediaTrack tmpResult = null;
 
         if (originTrack.format != null) { // not auto selection
             MediaTrack prevResult;
 
             MediaTrack[][] mediaTracks = filterByLanguage(renderer.mediaTracks, originTrack);
 
+            outerloop:
             for (int groupIndex = 0; groupIndex < mediaTracks.length; groupIndex++) {
                 prevResult = result;
 
@@ -513,26 +515,21 @@ public class TrackSelectorManager implements TrackSelectorCallback {
                         continue;
                     }
 
+                    // Fix disabled audio on streams (select at least something)
+                    if (tmpResult == null) {
+                        tmpResult = mediaTrack;
+                    }
+
                     int bounds = originTrack.inBounds(mediaTrack);
 
                     // Multiple ru track fix
                     if (bounds == 0 && MediaTrack.bitrateEquals(originTrack, mediaTrack)) {
                         result = mediaTrack;
-                        break;
+                        break outerloop;
                     }
 
                     if (bounds >= 0) {
                         int compare = mediaTrack.compare(result);
-
-                        //if (compare == 0) {
-                        //    if (MediaTrack.codecEquals(mediaTrack, originTrack)) {
-                        //        result = mediaTrack;
-                        //    }
-                        //} else if (compare > 0) {
-                        //    if (!MediaTrack.preferByCodec(result, mediaTrack)) {
-                        //        result = mediaTrack;
-                        //    }
-                        //}
 
                         if (compare == 0) {
                             if (MediaTrack.codecEquals(mediaTrack, originTrack)) {
@@ -563,9 +560,14 @@ public class TrackSelectorManager implements TrackSelectorCallback {
                     }
                 }
             }
+
+            // Fix disabled audio on streams (select at least something)
+            if (result == null || result.format == null) {
+                result = tmpResult;
+            }
         }
 
-        Log.d(TAG, "findBestMatch: Found: " + result.format);
+        Log.d(TAG, "findBestMatch: Found: " + (result != null ? result.format : null));
 
         return result;
     }
