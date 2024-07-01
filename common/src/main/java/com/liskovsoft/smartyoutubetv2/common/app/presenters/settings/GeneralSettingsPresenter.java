@@ -301,6 +301,14 @@ public class GeneralSettingsPresenter extends BasePresenter<Void> {
     private void appendKeyRemappingCategory(AppDialogPresenter settingsPresenter) {
         List<OptionItem> options = new ArrayList<>();
 
+        options.add(UiOptionItem.from(getContext().getString(R.string.player_quick_shorts_skip),
+                option -> mPlayerTweaksData.enableQuickSkipShorts(option.isSelected()),
+                mPlayerTweaksData.isQuickSkipShortsEnabled()));
+
+        options.add(UiOptionItem.from(getContext().getString(R.string.player_quick_skip_videos),
+                option -> mPlayerTweaksData.enableQuickSkipVideos(option.isSelected()),
+                mPlayerTweaksData.isQuickSkipVideosEnabled()));
+
         options.add(UiOptionItem.from("Play/Pause -> OK",
                 option -> mGeneralData.remapPlayToOK(option.isSelected()),
                 mGeneralData.isRemapPlayToOKEnabled()));
@@ -348,6 +356,10 @@ public class GeneralSettingsPresenter extends BasePresenter<Void> {
         options.add(UiOptionItem.from("Page Up/Down -> Speed Up/Down",
                 option -> mGeneralData.remapPageUpToSpeed(option.isSelected()),
                 mGeneralData.isRemapPageUpToSpeedEnabled()));
+        
+        options.add(UiOptionItem.from("Page Up/Down -> Speed Down/Up",
+                option -> mGeneralData.remapPageDownToSpeed(option.isSelected()),
+                mGeneralData.isRemapPageDownToSpeedEnabled()));
 
         options.add(UiOptionItem.from("Channel Up/Down -> Volume Up/Down",
                 option -> mGeneralData.remapChannelUpToVolume(option.isSelected()),
