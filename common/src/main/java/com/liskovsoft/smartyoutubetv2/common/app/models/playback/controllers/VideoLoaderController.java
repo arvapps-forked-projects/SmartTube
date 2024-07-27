@@ -308,7 +308,7 @@ public class VideoLoaderController extends PlayerEventListenerHelper implements 
                                    MessageHelpers.showLongMessage(getContext(), message);
                                }
 
-                               if (Helpers.containsAny(message, "Unexpected token", "Syntax error")) { // temporal fix
+                               if (Helpers.containsAny(message, "Unexpected token", "Syntax error", "invalid argument")) { // temporal fix
                                    YouTubeServiceManager.instance().applyNoPlaybackFix();
                                    restartEngine();
                                } else {
@@ -501,13 +501,20 @@ public class VideoLoaderController extends PlayerEventListenerHelper implements 
                 mPlayerData.setVideoBufferType(PlayerData.BUFFER_LOW);
             }
         } else if (Helpers.startsWithAny(error.getMessage(),
-                "Unable to connect to", "Invalid NAL length", "Response code: 421", "Invalid integer size")) {
+                "Unable to connect to", "Invalid NAL length", "Response code: 421",
+                "Invalid integer size", "Unexpected ArrayIndexOutOfBoundsException")) {
             // Switch between network engines in hope that one of them fixes the error
             //mPlayerTweaksData.setPlayerDataSource(getNextEngine());
             YouTubeServiceManager.instance().applyNoPlaybackFix();
         } else if (Helpers.startsWithAny(error.getMessage(), "Response code: 403")) {
             // "Response code: 403" is related to outdated VISITOR_INFO1_LIVE cookie
             YouTubeServiceManager.instance().applyNoPlaybackFix();
+        } else if (Helpers.startsWithAny(error.getMessage(), "Response code: 500")) {
+            // Subs error
+            if (mLastVideo != null) {
+                mPlayerData.disableSubtitlesPerChannel(mLastVideo.channelId);
+                mPlayerData.setFormat(mPlayerData.getDefaultSubtitleFormat());
+            }
         }
     }
 
