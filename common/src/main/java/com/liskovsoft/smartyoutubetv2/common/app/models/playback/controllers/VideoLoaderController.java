@@ -38,12 +38,11 @@ import java.util.List;
 public class VideoLoaderController extends PlayerEventListenerHelper implements OnDataChange {
     private static final String TAG = VideoLoaderController.class.getSimpleName();
     private static final long STREAM_END_THRESHOLD_MS = 180_000;
+    private static final long LONG_BUFFERING_THRESHOLD_MS = 20_000;
     private final Playlist mPlaylist;
     private final UniqueRandom mRandom;
     private Video mLastVideo;
     private int mLastErrorType = -1;
-    private long mLastErrorTimeMs;
-    private int mErrorCount;
     private SuggestionsController mSuggestionsController;
     private PlayerData mPlayerData;
     private PlayerTweaksData mPlayerTweaksData;
@@ -105,7 +104,7 @@ public class VideoLoaderController extends PlayerEventListenerHelper implements 
 
     @Override
     public void onBuffering() {
-        Utils.postDelayed(mOnLongBuffering, 10_000);
+        Utils.postDelayed(mOnLongBuffering, LONG_BUFFERING_THRESHOLD_MS);
     }
 
     private void onLongBuffering() {
@@ -118,13 +117,13 @@ public class VideoLoaderController extends PlayerEventListenerHelper implements 
                 getPlayer().getDurationMs() - getPlayer().getPositionMs() < STREAM_END_THRESHOLD_MS) {
             getMainController().onPlayEnd();
         } else {
-            updateErrorCounter(-1);
-            if (mErrorCount > 1) {
-                // Switch between network engines in hope that one of them fixes the error
-                // Cronet engine do less buffering
-                mPlayerTweaksData.setPlayerDataSource(PlayerTweaksData.PLAYER_DATA_SOURCE_CRONET);
-                restartEngine();
-            }
+            // Switch between network engines in hope that one of them fixes the error
+            // Cronet engine do less buffering
+            //mPlayerTweaksData.setPlayerDataSource(PlayerTweaksData.PLAYER_DATA_SOURCE_CRONET);
+            //restartEngine();
+
+            YouTubeServiceManager.instance().applyNoPlaybackFix();
+            restartEngine();
         }
     }
 
@@ -144,7 +143,7 @@ public class VideoLoaderController extends PlayerEventListenerHelper implements 
     public void onEngineError(int type, int rendererIndex, Throwable error) {
         Log.e(TAG, "Player error occurred: %s. Trying to fix…", type);
 
-        updateErrorCounter(type);
+        mLastErrorType = type;
         runErrorAction(type, rendererIndex, error);
     }
 
@@ -403,18 +402,6 @@ public class VideoLoaderController extends PlayerEventListenerHelper implements 
         Utils.removeCallbacks(mOnLongBuffering);
     }
 
-    private void updateErrorCounter(int type) {
-        long currentTimeMillis = System.currentTimeMillis();
-        if (currentTimeMillis - mLastErrorTimeMs < 60_000 && mLastErrorType == type) {
-            mErrorCount++;
-        } else {
-            mErrorCount = 1;
-        }
-
-        mLastErrorType = type;
-        mLastErrorTimeMs = currentTimeMillis;
-    }
-
     @SuppressLint("StringFormatMatches")
     private void runErrorAction(int type, int rendererIndex, Throwable error) {
         String message = error != null ? error.getMessage() : null;
@@ -437,7 +424,7 @@ public class VideoLoaderController extends PlayerEventListenerHelper implements 
                 break;
         }
 
-        applyGenericErrorAction(error);
+        applyGenericErrorAction(type, error);
 
         YouTubeServiceManager.instance().invalidatePlaybackCache();
 
@@ -493,20 +480,13 @@ public class VideoLoaderController extends PlayerEventListenerHelper implements 
         MessageHelpers.showLongMessage(getContext(), getContext().getString(msgResId) + "\n" + message);
     }
 
-    private void applyGenericErrorAction(Throwable error) {
+    private void applyGenericErrorAction(int type, Throwable error) {
         if (error instanceof OutOfMemoryError) {
             if (mPlayerData.getVideoBufferType() == PlayerData.BUFFER_LOW) {
                 mPlayerTweaksData.enableSectionPlaylist(false);
             } else {
                 mPlayerData.setVideoBufferType(PlayerData.BUFFER_LOW);
             }
-        } else if (Helpers.startsWithAny(error.getMessage(),
-                "Unable to connect to", "Invalid NAL length", "Response code: 421",
-                "Response code: 404", "Response code: 429", "Invalid integer size",
-                "Unexpected ArrayIndexOutOfBoundsException")) {
-            // Switch between network engines in hope that one of them fixes the error
-            //mPlayerTweaksData.setPlayerDataSource(getNextEngine());
-            YouTubeServiceManager.instance().applyNoPlaybackFix();
         } else if (Helpers.startsWithAny(error.getMessage(), "Response code: 403")) {
             // "Response code: 403" is related to outdated VISITOR_INFO1_LIVE cookie
             YouTubeServiceManager.instance().applyNoPlaybackFix();
@@ -516,6 +496,10 @@ public class VideoLoaderController extends PlayerEventListenerHelper implements 
                 mPlayerData.disableSubtitlesPerChannel(mLastVideo.channelId);
                 mPlayerData.setFormat(mPlayerData.getDefaultSubtitleFormat());
             }
+        } else if (type == PlayerEventListener.ERROR_TYPE_SOURCE) {
+            // Switch between network engines in hope that one of them fixes the error
+            //mPlayerTweaksData.setPlayerDataSource(getNextEngine());
+            YouTubeServiceManager.instance().applyNoPlaybackFix();
         }
     }
 
