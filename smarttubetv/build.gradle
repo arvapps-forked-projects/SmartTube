@@ -60,8 +60,8 @@ android {
         applicationId "com.liskovsoft.smarttubetv"
         minSdkVersion project.properties.minSdkVersion
         targetSdkVersion project.properties.targetSdkVersion
-        versionCode 1474
-        versionName "22.84"
+        versionCode 1476
+        versionName "22.86"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField "long", "TIMESTAMP", System.currentTimeMillis() + "L"
 
@@ -226,7 +226,7 @@ dependencies {
     // Android 4 SponsorBlock fix???
     // implementation 'org.conscrypt:conscrypt-android:2.5.2'
 
-    // debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.8.1'
+    // debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.14'
 
     //implementation 'com.github.stfalcon-studio:Chatkit:' + chatkitVersion
 
