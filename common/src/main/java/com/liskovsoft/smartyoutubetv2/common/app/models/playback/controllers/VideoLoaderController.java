@@ -457,7 +457,7 @@ public class VideoLoaderController extends PlayerEventListenerHelper implements 
                 msgResId = R.string.unknown_source_error;
         }
 
-        MessageHelpers.showLongMessage(getContext(), getContext().getString(msgResId) + "\n" + message + "\n" + getContext().getString(R.string.applying_fix));
+        MessageHelpers.showLongMessage(getContext(), getContext().getString(msgResId) + "\n" + message);
     }
 
     private void showRendererError(int rendererIndex, Throwable error) {
@@ -488,7 +488,9 @@ public class VideoLoaderController extends PlayerEventListenerHelper implements 
             return;
         }
 
-        if (error instanceof OutOfMemoryError) {
+        if (Helpers.containsAny(error.getMessage(), "Exception in CronetUrlRequest")) {
+            mPlayerTweaksData.setPlayerDataSource(PlayerTweaksData.PLAYER_DATA_SOURCE_DEFAULT);
+        } else if (error instanceof OutOfMemoryError) {
             if (mPlayerData.getVideoBufferType() == PlayerData.BUFFER_LOW) {
                 mPlayerTweaksData.enableSectionPlaylist(false);
             } else {
