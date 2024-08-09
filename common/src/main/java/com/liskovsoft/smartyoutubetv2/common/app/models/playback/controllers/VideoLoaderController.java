@@ -122,6 +122,7 @@ public class VideoLoaderController extends PlayerEventListenerHelper implements 
             //mPlayerTweaksData.setPlayerDataSource(PlayerTweaksData.PLAYER_DATA_SOURCE_CRONET);
             //restartEngine();
 
+            MessageHelpers.showLongMessage(getContext(), R.string.applying_fix);
             YouTubeServiceManager.instance().applyNoPlaybackFix();
             restartEngine();
         }
@@ -607,9 +608,9 @@ public class VideoLoaderController extends PlayerEventListenerHelper implements 
             return false;
         }
 
-        if (mPlayerData.isLegacyCodecsForced()) {
-            return false;
-        }
+        //if (mPlayerData.isLegacyCodecsForced()) {
+        //    return false;
+        //}
 
         return true;
     }
@@ -619,9 +620,9 @@ public class VideoLoaderController extends PlayerEventListenerHelper implements 
             return false;
         }
 
-        if (mPlayerData.isLegacyCodecsForced()) {
-            return false;
-        }
+        //if (mPlayerData.isLegacyCodecsForced()) {
+        //    return false;
+        //}
 
         return true;
     }
