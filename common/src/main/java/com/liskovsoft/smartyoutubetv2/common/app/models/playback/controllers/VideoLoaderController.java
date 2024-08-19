@@ -16,7 +16,7 @@ import com.liskovsoft.smartyoutubetv2.common.app.models.data.Playlist;
 import com.liskovsoft.smartyoutubetv2.common.app.models.data.SampleMediaItem;
 import com.liskovsoft.smartyoutubetv2.common.app.models.data.Video;
 import com.liskovsoft.smartyoutubetv2.common.app.models.data.VideoGroup;
-import com.liskovsoft.smartyoutubetv2.common.app.models.playback.PlayerEventListenerHelper;
+import com.liskovsoft.smartyoutubetv2.common.app.models.playback.BasePlayerController;
 import com.liskovsoft.smartyoutubetv2.common.app.models.playback.listener.PlayerEventListener;
 import com.liskovsoft.smartyoutubetv2.common.app.models.playback.manager.PlayerEngineConstants;
 import com.liskovsoft.smartyoutubetv2.common.app.presenters.AppDialogPresenter;
@@ -36,7 +36,7 @@ import io.reactivex.disposables.Disposable;
 import java.util.Collections;
 import java.util.List;
 
-public class VideoLoaderController extends PlayerEventListenerHelper implements OnDataChange {
+public class VideoLoaderController extends BasePlayerController implements OnDataChange {
     private static final String TAG = VideoLoaderController.class.getSimpleName();
     private static final long STREAM_END_THRESHOLD_MS = 180_000;
     private static final long LONG_BUFFERING_THRESHOLD_MS = 5_000;
@@ -110,7 +110,7 @@ public class VideoLoaderController extends PlayerEventListenerHelper implements 
     }
 
     private void onLongBuffering() {
-        updateBufferingCount();
+        //updateBufferingCount();
 
         if (mLastVideo == null) {
             return;
@@ -120,18 +120,21 @@ public class VideoLoaderController extends PlayerEventListenerHelper implements 
         if ((!mLastVideo.isLive || mLastVideo.isLiveEnd) &&
                 getPlayer().getDurationMs() - getPlayer().getPositionMs() < STREAM_END_THRESHOLD_MS) {
             getMainController().onPlayEnd();
-        } else if (isBufferingRecurrent()) {
-            MessageHelpers.showLongMessage(getContext(), R.string.applying_fix);
-
-            // Switch between network engines in hope that one of them fixes the error
-            // Cronet engine do less buffering
-            //mPlayerTweaksData.setPlayerDataSource(PlayerTweaksData.PLAYER_DATA_SOURCE_CRONET);
-            mPlayerTweaksData.setPlayerDataSource(getNextEngine());
-
-            //YouTubeServiceManager.instance().applyNoPlaybackFix();
-
-            restartEngine();
         }
+
+        // NOTE: useless fixes. Won't fix the buffering actually.
+        //else if (isBufferingRecurrent()) {
+        //    MessageHelpers.showLongMessage(getContext(), R.string.applying_fix);
+        //
+        //    // Switch between network engines in hope that one of them fixes the error
+        //    // Cronet engine do less buffering
+        //    //mPlayerTweaksData.setPlayerDataSource(PlayerTweaksData.PLAYER_DATA_SOURCE_CRONET);
+        //    mPlayerTweaksData.setPlayerDataSource(getNextEngine());
+        //
+        //    //YouTubeServiceManager.instance().applyNoPlaybackFix();
+        //
+        //    restartEngine();
+        //}
     }
 
     @Override
@@ -691,7 +694,9 @@ public class VideoLoaderController extends PlayerEventListenerHelper implements 
 
     private int getNextEngine() {
         int currentEngine = mPlayerTweaksData.getPlayerDataSource();
-        int[] engineList = { PlayerTweaksData.PLAYER_DATA_SOURCE_CRONET, PlayerTweaksData.PLAYER_DATA_SOURCE_DEFAULT, PlayerTweaksData.PLAYER_DATA_SOURCE_OKHTTP };
+        int[] engineList = Utils.skipCronet() ?
+                new int[] { PlayerTweaksData.PLAYER_DATA_SOURCE_DEFAULT, PlayerTweaksData.PLAYER_DATA_SOURCE_OKHTTP } :
+                new int[] { PlayerTweaksData.PLAYER_DATA_SOURCE_CRONET, PlayerTweaksData.PLAYER_DATA_SOURCE_DEFAULT, PlayerTweaksData.PLAYER_DATA_SOURCE_OKHTTP };
         return Helpers.getNextValue(currentEngine, engineList);
     }
 

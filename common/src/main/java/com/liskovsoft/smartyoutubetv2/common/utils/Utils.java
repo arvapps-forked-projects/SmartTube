@@ -57,8 +57,8 @@ import com.jakewharton.processphoenix.ProcessPhoenix;
 import com.liskovsoft.mediaserviceinterfaces.yt.data.MediaGroup;
 import com.liskovsoft.sharedutils.helpers.Helpers;
 import com.liskovsoft.sharedutils.helpers.MessageHelpers;
-import com.liskovsoft.sharedutils.helpers.PermissionHelpers;
 import com.liskovsoft.sharedutils.mylogger.Log;
+import com.liskovsoft.smartyoutubetv2.common.BuildConfig;
 import com.liskovsoft.smartyoutubetv2.common.R;
 import com.liskovsoft.smartyoutubetv2.common.app.models.data.Video;
 import com.liskovsoft.smartyoutubetv2.common.app.models.playback.manager.PlayerEngineConstants;
@@ -242,22 +242,8 @@ public class Utils {
         }
 
         if (RemoteControlData.instance(context).isDeviceLinkEnabled()) {
-            // Background playback on Android 10 and above
-            // Shows overlay dialog if needed (alive activity required)
-            if (!PermissionHelpers.hasOverlayPermissions(context)) {
-                AppDialogUtil.showConfirmationDialog(
-                        context, context.getString(R.string.remote_control_permission), () -> {
-                            PermissionHelpers.verifyOverlayPermissions(context);
-                            // Service that prevents the app from destroying
-                            if (context instanceof MotherActivity) {
-                                ((MotherActivity) context).addOnResult((request, response, data) -> startService(context, RemoteControlService.class));
-                            }
-                        }
-                );
-            } else {
-                // Service that prevents the app from destroying
-                startService(context, RemoteControlService.class);
-            }
+            // Service that prevents the app from destroying
+            startService(context, RemoteControlService.class);
         } else {
             stopService(context, RemoteControlService.class);
         }
@@ -1021,5 +1007,38 @@ public class Utils {
         }
 
         return uniqueId;
+    }
+
+    public static <T> boolean chainProcess(List<T> listeners, ChainProcessor<T> processor) {
+        boolean result = false;
+
+        for (T listener : listeners) {
+            result = processor.process(listener);
+
+            if (result) {
+                break;
+            }
+        }
+
+        return result;
+    }
+
+    public interface ChainProcessor<T> {
+        boolean process(T listener);
+    }
+
+    public static <T> void process(List<T> listeners, Processor<T> processor) {
+        for (T listener : listeners) {
+            processor.process(listener);
+        }
+    }
+
+    public interface Processor<T> {
+        void process(T listener);
+    }
+
+    public static boolean skipCronet() {
+        // Android 6 and below may crash running Cronet???
+        return VERSION.SDK_INT <= 23 || Helpers.equals(BuildConfig.FLAVOR, "strtarmenia");
     }
 }
