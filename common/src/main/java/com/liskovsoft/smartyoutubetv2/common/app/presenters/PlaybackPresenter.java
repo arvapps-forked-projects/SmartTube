@@ -5,6 +5,7 @@ import android.app.Activity;
 import android.content.Context;
 
 import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentActivity;
 
 import com.liskovsoft.mediaserviceinterfaces.yt.data.MediaItemMetadata;
 import com.liskovsoft.smartyoutubetv2.common.app.models.data.Video;
@@ -51,15 +52,11 @@ public class PlaybackPresenter extends BasePresenter<PlaybackView> implements Pl
         }
     };
     private Video mPendingVideo;
-    private WeakReference<PlaybackView> mPlayer = new WeakReference<>(null);
-    private WeakReference<Activity> mActivity = new WeakReference<>(null);
+    //private Activity mActivity; // prevent from GC till onViewDestroyed call
+    //private PlaybackView mPlayer; // prevent from GC till onViewDestroyed call
 
     private PlaybackPresenter(Context context) {
         super(context);
-
-        if (context instanceof Activity) {
-            mActivity = new WeakReference<>((Activity) context);
-        }
 
         mViewManager = ViewManager.instance(context);
 
@@ -89,7 +86,7 @@ public class PlaybackPresenter extends BasePresenter<PlaybackView> implements Pl
     @Override
     public void onViewInitialized() {
         super.onViewInitialized();
-
+        
         initControllers(getView());
     }
 
@@ -186,27 +183,16 @@ public class PlaybackPresenter extends BasePresenter<PlaybackView> implements Pl
 
     // Controller methods
 
-    //private void initControllers(PlaybackView playbackView) {
-    //    if (playbackView != null) {
-    //        // Re-init after app exit
-    //        process(PlayerEventListener::onInit);
-    //
-    //        if (mPendingVideo != null) {
-    //            openVideo(mPendingVideo);
-    //            mPendingVideo = null;
-    //        }
-    //    }
-    //}
-
     private void initControllers(PlaybackView player) {
         if (player != null) {
-            if (mPlayer.get() != player) { // Be ready to re-init after app exit
-                // Sometimes important events happened even after the view was destroyed
-                // So, use this backup variables
-                mPlayer = new WeakReference<>(player);
-                mActivity = new WeakReference<>(((Fragment) player).getActivity());
-                process(PlayerEventListener::onInit);
-            }
+            // Re-init after app exit
+            process(PlayerEventListener::onInit);
+
+            //if (mPlayer != player) { // Be ready to re-init after app exit
+            //    mPlayer = player;
+            //    mActivity = ((Fragment) player).getActivity();
+            //    process(PlayerEventListener::onInit);
+            //}
 
             if (mPendingVideo != null) {
                 openVideo(mPendingVideo);
@@ -215,20 +201,14 @@ public class PlaybackPresenter extends BasePresenter<PlaybackView> implements Pl
         }
     }
 
-    //public PlaybackView getPlayer() {
-    //    return getView();
-    //}
-    //
-    //public Activity getActivity() {
-    //    return getContext() instanceof Activity ? (Activity) getContext() : null;
-    //}
-
     public PlaybackView getPlayer() {
-        return mPlayer.get();
+        return getView();
+        //return mPlayer;
     }
 
     public Activity getActivity() {
-        return mActivity.get();
+        return getContext() instanceof Activity ? (Activity) getContext() : null;
+        //return mActivity;
     }
 
     @SuppressWarnings("unchecked")
@@ -298,6 +278,8 @@ public class PlaybackPresenter extends BasePresenter<PlaybackView> implements Pl
     @Override
     public void onViewDestroyed() {
         process(ViewEventListener::onViewDestroyed);
+        //mPlayer = null;
+        //mActivity = null;
     }
 
     @Override
