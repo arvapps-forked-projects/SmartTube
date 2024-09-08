@@ -366,7 +366,23 @@ public final class Video {
             split = Helpers.appendArray(split, new String[]{null});
         }
 
-        if (split.length != 16) {
+        if (split.length == 16) {
+            split = Helpers.appendArray(split, new String[]{"-1"});
+        }
+
+        if (split.length == 17) {
+            split = Helpers.appendArray(split, new String[]{null});
+        }
+
+        if (split.length == 18) {
+            split = Helpers.appendArray(split, new String[]{null});
+        }
+
+        if (split.length == 19) {
+            split = Helpers.appendArray(split, new String[]{null});
+        }
+
+        if (split.length != 20) {
             return null;
         }
 
@@ -388,6 +404,10 @@ public final class Video {
         result.itemType = Helpers.parseInt(split[13]);
         result.secondTitle = Helpers.parseStr(split[14]);
         result.previewUrl = Helpers.parseStr(split[15]);
+        result.percentWatched = Helpers.parseFloat(split[16]);
+        result.metadataTitle = Helpers.parseStr(split[17]);
+        result.metadataSecondTitle = Helpers.parseStr(split[18]);
+        result.badge = Helpers.parseStr(split[19]);
 
         return result;
     }
@@ -403,7 +423,7 @@ public final class Video {
     @Override
     public String toString() {
         return Helpers.mergeObj(id, category, title, videoId, videoUrl, playlistId, channelId, bgImageUrl, cardImageUrl,
-                null, playlistParams, sectionId, getReloadPageKey(), itemType, secondTitle, previewUrl);
+                null, playlistParams, sectionId, getReloadPageKey(), itemType, secondTitle, previewUrl, percentWatched, metadataTitle, metadataSecondTitle, badge);
     }
 
     public boolean hasVideo() {
@@ -472,6 +492,10 @@ public final class Video {
     }
 
     public boolean isEmpty() {
+        if (isChapter) {
+            return false;
+        }
+
         // NOTE: Movies labeled as "Free with Ads" not supported yet
         return Helpers.allNulls(videoId, playlistId, reloadPageKey, playlistParams, channelId) || isMovie;
     }
@@ -573,7 +597,7 @@ public final class Video {
     }
 
     private boolean belongsToGroup(int groupId) {
-        return getGroup() != null && getGroup().getMediaGroup() != null && getGroup().getMediaGroup().getType() == groupId;
+        return getGroup() != null && getGroup().getType() == groupId;
     }
 
     public boolean belongsToSection() {

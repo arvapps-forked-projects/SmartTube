@@ -1085,7 +1085,8 @@ public class GeneralData implements ProfileChangeListener {
 
     private void persistState() {
         // Zero index is skipped. Selected sections were there.
-        mPrefs.setProfileData(GENERAL_DATA, Helpers.mergeData(null, mBootSectionId, mIsSettingsSectionEnabled, mAppExitShortcut, mIsReturnToLauncherEnabled, mBackgroundShortcut, mPinnedItems, mIsHideShortsFromSubscriptionsEnabled,
+        mPrefs.setProfileData(GENERAL_DATA, Helpers.mergeData(null, mBootSectionId, mIsSettingsSectionEnabled, mAppExitShortcut, mIsReturnToLauncherEnabled,
+                mBackgroundShortcut, mPinnedItems, mIsHideShortsFromSubscriptionsEnabled,
                 mIsRemapFastForwardToNextEnabled, null, mIsProxyEnabled, mIsBridgeCheckEnabled, mIsOkButtonLongPressDisabled, mLastPlaylistId,
                 null, mIsHideUpcomingEnabled, mIsRemapPageUpToNextEnabled, mIsRemapPageUpToLikeEnabled,
                 mIsRemapChannelUpToNextEnabled, mIsRemapChannelUpToLikeEnabled, mIsRemapPageUpToSpeedEnabled,
@@ -1097,7 +1098,8 @@ public class GeneralData implements ProfileChangeListener {
                 mHistoryState, mRememberSubscriptionsPosition, null, mIsRemapNumbersToSpeedEnabled, mIsRemapDpadUpToSpeedEnabled, mIsRemapChannelUpToVolumeEnabled,
                 mIsRemapDpadUpToVolumeEnabled, mIsRemapDpadLeftToVolumeEnabled, mIsRemapNextToFastForwardEnabled, mIsHideWatchedFromNotificationsEnabled,
                 mChangelog, mPlayerExitShortcut, mIsOldChannelLookEnabled, mIsFullscreenModeEnabled, mIsHideWatchedFromWatchLaterEnabled,
-                mRememberPinnedPosition, mSelectedItems, mIsFirstUseTooltipEnabled, mIsDeviceSpecificBackupEnabled, mIsAutoBackupEnabled, mIsRemapPageDownToSpeedEnabled));
+                mRememberPinnedPosition, mSelectedItems, mIsFirstUseTooltipEnabled, mIsDeviceSpecificBackupEnabled, mIsAutoBackupEnabled,
+                mIsRemapPageDownToSpeedEnabled));
     }
 
     private int getSectionId(Video item) {

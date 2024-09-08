@@ -19,6 +19,7 @@ import com.liskovsoft.smartyoutubetv2.common.app.models.data.VideoGroup;
 import com.liskovsoft.smartyoutubetv2.common.app.models.playback.BasePlayerController;
 import com.liskovsoft.smartyoutubetv2.common.app.models.playback.listener.PlayerEventListener;
 import com.liskovsoft.smartyoutubetv2.common.app.models.playback.manager.PlayerEngineConstants;
+import com.liskovsoft.smartyoutubetv2.common.app.models.playback.service.VideoStateService;
 import com.liskovsoft.smartyoutubetv2.common.app.presenters.AppDialogPresenter;
 import com.liskovsoft.smartyoutubetv2.common.app.presenters.dialogs.VideoActionPresenter;
 import com.liskovsoft.smartyoutubetv2.common.exoplayer.selector.FormatItem;
@@ -47,6 +48,7 @@ public class VideoLoaderController extends BasePlayerController implements OnDat
     private SuggestionsController mSuggestionsController;
     private PlayerData mPlayerData;
     private PlayerTweaksData mPlayerTweaksData;
+    private VideoStateService mStateService;
     private long mSleepTimerStartMs;
     private Disposable mFormatInfoAction;
     private Disposable mMpdStreamAction;
@@ -83,6 +85,7 @@ public class VideoLoaderController extends BasePlayerController implements OnDat
         mPlayerData.setOnChange(this);
         mPlayerTweaksData = PlayerTweaksData.instance(getContext());
         mSleepTimerStartMs = System.currentTimeMillis();
+        mStateService = VideoStateService.instance(getContext());
     }
 
     @Override
@@ -338,12 +341,14 @@ public class VideoLoaderController extends BasePlayerController implements OnDat
         String bgImageUrl = null;
 
         mLastVideo.sync(formatInfo);
+        mStateService.setHistoryBroken(formatInfo.isHistoryBroken());
 
         if (formatInfo.isUnplayable()) {
             getPlayer().setTitle(formatInfo.getPlayabilityStatus());
             getPlayer().showProgressBar(false);
             mSuggestionsController.loadSuggestions(mLastVideo);
             bgImageUrl = mLastVideo.getBackgroundUrl();
+            //scheduleNextVideoTimer(5_000);
             if (formatInfo.isEmbedRestricted()) { // temp fix (not work as expected)
                 //YouTubeServiceManager.instance().invalidateCache();
                 scheduleRebootAppTimer(5_000);
@@ -456,6 +461,9 @@ public class VideoLoaderController extends BasePlayerController implements OnDat
 
         if (Helpers.startsWithAny(message, "Unable to connect to")) {
             // No internet connection
+            if (!mPlayerTweaksData.isNetworkErrorFixingDisabled()) {
+                mPlayerTweaksData.setPlayerDataSource(getNextEngine()); // ???
+            }
             MessageHelpers.showLongMessage(getContext(), errorTitle + "\n" + message);
             return;
         }
@@ -475,15 +483,16 @@ public class VideoLoaderController extends BasePlayerController implements OnDat
             // "Response code: 404" (not sure whether below helps)
             // "Response code: 503" (not sure whether below helps)
             YouTubeServiceManager.instance().applyNoPlaybackFix();
-        } else if (type == PlayerEventListener.ERROR_TYPE_SOURCE && rendererIndex == PlayerEventListener.RENDERER_INDEX_UNKNOWN &&
-                !mPlayerTweaksData.isNetworkErrorFixingDisabled()) {
+        } else if (type == PlayerEventListener.ERROR_TYPE_SOURCE && rendererIndex == PlayerEventListener.RENDERER_INDEX_UNKNOWN) {
             // NOTE: Fixing too many requests or network issues
             // NOTE: All these errors have unknown renderer (-1)
             // "Unable to connect to", "Invalid NAL length", "Response code: 421",
             // "Response code: 404", "Response code: 429", "Invalid integer size",
             // "Unexpected ArrayIndexOutOfBoundsException", "Unexpected IndexOutOfBoundsException"
             // "Response code: 403" (url deciphered incorrectly)
-            mPlayerTweaksData.setPlayerDataSource(getNextEngine());
+            if (!mPlayerTweaksData.isNetworkErrorFixingDisabled()) {
+                mPlayerTweaksData.setPlayerDataSource(getNextEngine());
+            }
         } else if (type == PlayerEventListener.ERROR_TYPE_RENDERER && rendererIndex == PlayerEventListener.RENDERER_INDEX_SUBTITLE) {
             // "Response code: 500"
             if (mLastVideo != null) {
