@@ -128,6 +128,9 @@ public class VideoLoaderController extends BasePlayerController implements OnDat
         if ((!mLastVideo.isLive || mLastVideo.isLiveEnd) &&
                 getPlayer().getDurationMs() - getPlayer().getPositionMs() < STREAM_END_THRESHOLD_MS) {
             getMainController().onPlayEnd();
+        } else if (!mPlayerTweaksData.isNetworkErrorFixingDisabled()) {
+            mPlayerTweaksData.setPlayerDataSource(getNextEngine()); // ???
+            MessageHelpers.showLongMessage(getContext(), R.string.applying_fix);
         }
 
         // NOTE: useless fixes. Won't fix the buffering actually.
@@ -461,9 +464,6 @@ public class VideoLoaderController extends BasePlayerController implements OnDat
 
         if (Helpers.startsWithAny(message, "Unable to connect to")) {
             // No internet connection
-            if (!mPlayerTweaksData.isNetworkErrorFixingDisabled()) {
-                mPlayerTweaksData.setPlayerDataSource(getNextEngine()); // ???
-            }
             MessageHelpers.showLongMessage(getContext(), errorTitle + "\n" + message);
             return;
         }
@@ -478,7 +478,7 @@ public class VideoLoaderController extends BasePlayerController implements OnDat
             }
         } else if (Helpers.containsAny(message, "Exception in CronetUrlRequest")) {
             mPlayerTweaksData.setPlayerDataSource(PlayerTweaksData.PLAYER_DATA_SOURCE_DEFAULT);
-        } else if (Helpers.startsWithAny(message, "Response code: 403")) {
+        } else if (Helpers.startsWithAny(message, "Response code: 403", "Response code: 404")) {
             // "Response code: 403" (url deciphered incorrectly)
             // "Response code: 404" (not sure whether below helps)
             // "Response code: 503" (not sure whether below helps)
