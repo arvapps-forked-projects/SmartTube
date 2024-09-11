@@ -484,7 +484,7 @@ public class VideoLoaderController extends BasePlayerController implements OnDat
             }
         } else if (Helpers.containsAny(message, "Exception in CronetUrlRequest")) {
             mPlayerTweaksData.setPlayerDataSource(PlayerTweaksData.PLAYER_DATA_SOURCE_DEFAULT);
-        } else if (Helpers.startsWithAny(message, "Response code: 403", "Response code: 404")) {
+        } else if (Helpers.startsWithAny(message, "Response code: 403", "Response code: 404", "Response code: 503")) {
             // "Response code: 403" (url deciphered incorrectly)
             // "Response code: 404" (not sure whether below helps)
             // "Response code: 503" (not sure whether below helps)
@@ -506,13 +506,15 @@ public class VideoLoaderController extends BasePlayerController implements OnDat
                 mPlayerData.setFormat(mPlayerData.getDefaultSubtitleFormat());
             }
         } else if (type == PlayerEventListener.ERROR_TYPE_RENDERER && rendererIndex == PlayerEventListener.RENDERER_INDEX_VIDEO) {
-            FormatItem videoFormat = mPlayerData.getFormat(FormatItem.TYPE_VIDEO);
-            if (!videoFormat.isPreset()) {
-                mPlayerData.setFormat(mPlayerData.getDefaultVideoFormat());
-            }
+            //FormatItem videoFormat = mPlayerData.getFormat(FormatItem.TYPE_VIDEO);
+            //if (!videoFormat.isPreset()) {
+            //    mPlayerData.setFormat(mPlayerData.getDefaultVideoFormat());
+            //}
+            mPlayerData.setFormat(FormatItem.VIDEO_FHD_AVC_30);
             mPlayerTweaksData.forceSWDecoder(false);
         } else if (type == PlayerEventListener.ERROR_TYPE_RENDERER && rendererIndex == PlayerEventListener.RENDERER_INDEX_AUDIO) {
-            mPlayerData.setFormat(mPlayerData.getDefaultAudioFormat());
+            //mPlayerData.setFormat(mPlayerData.getDefaultAudioFormat());
+            mPlayerData.setFormat(FormatItem.AUDIO_HQ_MP4A);
         } else {
             fullErrorMsg = errorTitle + "\n" + message;
         }
