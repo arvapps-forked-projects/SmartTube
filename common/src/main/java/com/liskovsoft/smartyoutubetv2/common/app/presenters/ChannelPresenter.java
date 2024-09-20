@@ -77,7 +77,7 @@ public class ChannelPresenter extends BasePresenter<ChannelView> implements Vide
 
         if (mChannelId != null) {
             getView().clear();
-            updateRows(mChannelId);
+            updateRows(obtainChannelObservable(mChannelId));
         } else if (!mPendingGroups.isEmpty()) {
             getView().clear();
             for (List<MediaGroup> group : mPendingGroups) {
@@ -167,7 +167,7 @@ public class ChannelPresenter extends BasePresenter<ChannelView> implements Vide
 
         if (getView() != null) {
             getView().clear();
-            updateRows(channelId);
+            updateRows(obtainChannelObservable(channelId));
             // Fix double results. Prevent from doing the same in onViewInitialized()
             mChannelId = null;
         }
@@ -197,18 +197,14 @@ public class ChannelPresenter extends BasePresenter<ChannelView> implements Vide
         mSortIdx = 0;
     }
 
-    private void updateRows(String channelId) {
-        if (channelId == null) {
-            return;
-        }
-
+    private void updateRows(Observable<List<MediaGroup>> group) {
         Log.d(TAG, "updateRows: Start loading...");
+
+        disposeActions();
 
         getView().showProgressBar(true);
 
-        Observable<List<MediaGroup>> channelObserve = obtainChannelObservable(channelId);
-
-        mUpdateAction = channelObserve
+        mUpdateAction = group
                 .subscribe(
                         this::updateRows,
                         error -> {
@@ -225,7 +221,6 @@ public class ChannelPresenter extends BasePresenter<ChannelView> implements Vide
 
     public void updateRows(List<MediaGroup> mediaGroups) {
         if (getView() == null) { // starting from outside (e.g. MediaServiceManager)
-            disposeActions();
             mChannelId = null;
             mPendingGroups.add(mediaGroups);
             ViewManager.instance(getContext()).startView(ChannelView.class);
