@@ -133,20 +133,6 @@ public class VideoLoaderController extends BasePlayerController implements OnDat
             mPlayerTweaksData.setPlayerDataSource(getNextEngine()); // ???
             restartEngine();
         }
-
-        // NOTE: useless fixes. Won't fix the buffering actually.
-        //else if (isBufferingRecurrent()) {
-        //    MessageHelpers.showLongMessage(getContext(), R.string.applying_fix);
-        //
-        //    // Switch between network engines in hope that one of them fixes the error
-        //    // Cronet engine do less buffering
-        //    //mPlayerTweaksData.setPlayerDataSource(PlayerTweaksData.PLAYER_DATA_SOURCE_CRONET);
-        //    mPlayerTweaksData.setPlayerDataSource(getNextEngine());
-        //
-        //    //YouTubeServiceManager.instance().applyNoPlaybackFix();
-        //
-        //    restartEngine();
-        //}
     }
 
     @Override
@@ -484,10 +470,16 @@ public class VideoLoaderController extends BasePlayerController implements OnDat
         }
 
         if (error instanceof OutOfMemoryError) {
-            if (mPlayerData.getVideoBufferType() == PlayerData.BUFFER_LOWEST) {
+            //if (mPlayerData.getVideoBufferType() == PlayerData.BUFFER_LOWEST) {
+            //    mPlayerTweaksData.enableSectionPlaylist(false);
+            //} else if (mPlayerData.getVideoBufferType() == PlayerData.BUFFER_LOW) {
+            //    mPlayerData.setVideoBufferType(PlayerData.BUFFER_LOWEST);
+            //} else {
+            //    mPlayerData.setVideoBufferType(PlayerData.BUFFER_LOW);
+            //}
+
+            if (mPlayerData.getVideoBufferType() == PlayerData.BUFFER_LOW || mPlayerData.getVideoBufferType() == PlayerData.BUFFER_LOWEST) {
                 mPlayerTweaksData.enableSectionPlaylist(false);
-            } else if (mPlayerData.getVideoBufferType() == PlayerData.BUFFER_LOW) {
-                mPlayerData.setVideoBufferType(PlayerData.BUFFER_LOWEST);
             } else {
                 mPlayerData.setVideoBufferType(PlayerData.BUFFER_LOW);
             }
