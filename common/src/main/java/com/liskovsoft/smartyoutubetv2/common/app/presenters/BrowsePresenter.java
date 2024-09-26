@@ -513,8 +513,10 @@ public class BrowsePresenter extends BasePresenter<BrowseView> implements Sectio
         createPinnedMapping(item);
 
         BrowseSection newSection = createPinnedSection(item);
-        Helpers.removeIf(mSections, section -> section.getId() == newSection.getId());
-        mSections.add(newSection);
+        //Helpers.removeIf(mSections, section -> section.getId() == newSection.getId());
+        if (!mSections.contains(newSection)) {
+            mSections.add(newSection);
+        }
         getView().addSection(-1, newSection);
     }
 
@@ -955,6 +957,10 @@ public class BrowsePresenter extends BasePresenter<BrowseView> implements Sectio
     }
 
     private Observable<MediaGroup> createPinnedGridAction(Video item) {
+        if (item.channelGroupId != -1) {
+            return mContentService.getSubscriptionsObserve(mGeneralData.getChannelGroupIds(item.channelGroupId));
+        }
+
         return ChannelUploadsPresenter.instance(getContext()).obtainUploadsObservable(item);
     }
 

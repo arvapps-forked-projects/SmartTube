@@ -13,7 +13,7 @@ import com.liskovsoft.smartyoutubetv2.common.app.presenters.AppDialogPresenter;
 import com.liskovsoft.smartyoutubetv2.common.app.presenters.BrowsePresenter;
 import com.liskovsoft.smartyoutubetv2.common.app.presenters.dialogs.menu.providers.ChannelGroup.Channel;
 import com.liskovsoft.smartyoutubetv2.common.misc.MediaServiceManager;
-import com.liskovsoft.smartyoutubetv2.common.prefs.MainUIData;
+import com.liskovsoft.smartyoutubetv2.common.prefs.GeneralData;
 import com.liskovsoft.smartyoutubetv2.common.utils.SimpleEditDialog;
 
 import java.util.ArrayList;
@@ -22,8 +22,8 @@ import java.util.List;
 class SubscriptionGroupMenuProvider extends ContextMenuProvider {
     private final Context mContext;
 
-    public SubscriptionGroupMenuProvider(@NonNull Context context, int pos) {
-        super(pos);
+    public SubscriptionGroupMenuProvider(@NonNull Context context, int idx) {
+        super(idx);
         mContext = context;
     }
 
@@ -42,6 +42,11 @@ class SubscriptionGroupMenuProvider extends ContextMenuProvider {
         return item != null && (item.channelId != null || item.videoId != null);
     }
 
+    @Override
+    public int getMenuType() {
+        return MENU_TYPE_VIDEO;
+    }
+
     private void showGroupDialogAndFetchChannel(Video item) {
         if (item.hasChannel()) {
             showGroupDialog(item);
@@ -58,16 +63,20 @@ class SubscriptionGroupMenuProvider extends ContextMenuProvider {
     private void showGroupDialog(Video item) {
         AppDialogPresenter dialogPresenter = AppDialogPresenter.instance(mContext);
 
-        List<ChannelGroup> groups = MainUIData.instance(mContext).getChannelGroups();
+        List<ChannelGroup> groups = GeneralData.instance(mContext).getChannelGroups();
 
         List<OptionItem> options = new ArrayList<>();
 
         options.add(UiOptionItem.from(mContext.getString(R.string.new_subscriptions_group), optionItem -> {
             dialogPresenter.closeDialog();
             SimpleEditDialog.show(mContext, mContext.getString(R.string.new_subscriptions_group), newValue -> {
-                MainUIData.instance(mContext).addChannelGroup(
-                        new ChannelGroup(newValue, null, new Channel(item.getAuthor(), item.cardImageUrl, item.channelId))
-                );
+                if (GeneralData.instance(mContext).findChannelGroup(newValue) != null) {
+                    return false;
+                }
+
+                ChannelGroup group = new ChannelGroup(newValue, null, new Channel(item.getAuthor(), item.cardImageUrl, item.channelId));
+                GeneralData.instance(mContext).addChannelGroup(group);
+                BrowsePresenter.instance(mContext).pinItem(Video.from(group));
                 return true;
             }, mContext.getString(R.string.new_subscriptions_group), true);
         }, false));
@@ -81,10 +90,10 @@ class SubscriptionGroupMenuProvider extends ContextMenuProvider {
                 }
 
                 if (!group.isEmpty()) {
-                    MainUIData.instance(mContext).addChannelGroup(group);
+                    GeneralData.instance(mContext).addChannelGroup(group);
                     BrowsePresenter.instance(mContext).pinItem(Video.from(group));
                 } else {
-                    MainUIData.instance(mContext).removeChannelGroup(group);
+                    GeneralData.instance(mContext).removeChannelGroup(group);
                     BrowsePresenter.instance(mContext).unpinItem(Video.from(group));
                 }
             }, group.contains(item.channelId)));
