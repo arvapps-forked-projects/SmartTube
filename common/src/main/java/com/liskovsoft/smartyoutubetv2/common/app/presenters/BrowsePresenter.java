@@ -34,6 +34,7 @@ import com.liskovsoft.smartyoutubetv2.common.app.presenters.dialogs.menu.Channel
 import com.liskovsoft.smartyoutubetv2.common.app.presenters.dialogs.menu.SectionMenuPresenter;
 import com.liskovsoft.smartyoutubetv2.common.app.presenters.dialogs.menu.VideoMenuPresenter;
 import com.liskovsoft.smartyoutubetv2.common.app.presenters.dialogs.menu.VideoMenuPresenter.VideoMenuCallback;
+import com.liskovsoft.smartyoutubetv2.common.app.presenters.dialogs.menu.providers.channelgroup.ChannelGroupService;
 import com.liskovsoft.smartyoutubetv2.common.app.presenters.interfaces.SectionPresenter;
 import com.liskovsoft.smartyoutubetv2.common.app.presenters.interfaces.VideoGroupPresenter;
 import com.liskovsoft.smartyoutubetv2.common.app.views.BrowseView;
@@ -480,6 +481,11 @@ public class BrowsePresenter extends BasePresenter<BrowseView> implements Sectio
         updateSections();
     }
 
+    public void renameSection(Video section) {
+        mGeneralData.renameSection(section.getId(), section.getTitle());
+        updateSections();
+    }
+
     public void enableAllSections(boolean enable) {
         enableSection(MediaGroup.TYPE_HISTORY, enable);
         enableSection(MediaGroup.TYPE_USER_PLAYLISTS, enable);
@@ -539,18 +545,18 @@ public class BrowsePresenter extends BasePresenter<BrowseView> implements Sectio
 
     public void unpinItem(Video item) {
         mGeneralData.removePinnedItem(item);
-        mGeneralData.removeSelectedItem(item.hashCode());
+        mGeneralData.removeSelectedItem(item.getId());
 
         BrowseSection section = null;
 
         for (BrowseSection cat : mSections) {
-            if (cat.getId() == item.hashCode()) {
+            if (cat.getId() == item.getId()) {
                 section = cat;
                 break;
             }
         }
 
-        mGridMapping.remove(item.hashCode());
+        mGridMapping.remove(item.getId());
 
         if (getView() != null) {
             getView().removeSection(section);
@@ -958,7 +964,7 @@ public class BrowsePresenter extends BasePresenter<BrowseView> implements Sectio
 
     private Observable<MediaGroup> createPinnedGridAction(Video item) {
         if (item.channelGroupId != -1) {
-            return mContentService.getSubscriptionsObserve(mGeneralData.getChannelGroupIds(item.channelGroupId));
+            return mContentService.getSubscriptionsObserve(ChannelGroupService.instance(getContext()).getChannelGroupIds(item.channelGroupId));
         }
 
         return ChannelUploadsPresenter.instance(getContext()).obtainUploadsObservable(item);
@@ -1063,15 +1069,15 @@ public class BrowsePresenter extends BasePresenter<BrowseView> implements Sectio
 
     private void createPinnedMapping(Video item) {
         if (enableRows(item)) {
-            mRowMapping.put(item.hashCode(), createPinnedRowAction(item));
+            mRowMapping.put(item.getId(), createPinnedRowAction(item));
         } else {
-            mGridMapping.put(item.hashCode(), createPinnedGridAction(item));
+            mGridMapping.put(item.getId(), createPinnedGridAction(item));
         }
     }
 
     private BrowseSection createPinnedSection(Video item) {
         return new BrowseSection(
-                item.hashCode(), item.getTitle(), enableRows(item) ? BrowseSection.TYPE_ROW : BrowseSection.TYPE_GRID, item.getCardImageUrl(), false, item);
+                item.getId(), item.getTitle(), enableRows(item) ? BrowseSection.TYPE_ROW : BrowseSection.TYPE_GRID, item.getCardImageUrl(), false, item);
     }
 
     private boolean enableRows(Video item) {

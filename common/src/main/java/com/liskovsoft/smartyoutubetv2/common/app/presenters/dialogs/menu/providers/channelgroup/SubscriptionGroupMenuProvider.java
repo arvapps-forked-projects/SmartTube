@@ -1,4 +1,4 @@
-package com.liskovsoft.smartyoutubetv2.common.app.presenters.dialogs.menu.providers;
+package com.liskovsoft.smartyoutubetv2.common.app.presenters.dialogs.menu.providers.channelgroup;
 
 import android.content.Context;
 
@@ -11,20 +11,22 @@ import com.liskovsoft.smartyoutubetv2.common.app.models.playback.ui.OptionItem;
 import com.liskovsoft.smartyoutubetv2.common.app.models.playback.ui.UiOptionItem;
 import com.liskovsoft.smartyoutubetv2.common.app.presenters.AppDialogPresenter;
 import com.liskovsoft.smartyoutubetv2.common.app.presenters.BrowsePresenter;
-import com.liskovsoft.smartyoutubetv2.common.app.presenters.dialogs.menu.providers.ChannelGroup.Channel;
+import com.liskovsoft.smartyoutubetv2.common.app.presenters.dialogs.menu.providers.ContextMenuProvider;
+import com.liskovsoft.smartyoutubetv2.common.app.presenters.dialogs.menu.providers.channelgroup.ChannelGroup.Channel;
 import com.liskovsoft.smartyoutubetv2.common.misc.MediaServiceManager;
-import com.liskovsoft.smartyoutubetv2.common.prefs.GeneralData;
 import com.liskovsoft.smartyoutubetv2.common.utils.SimpleEditDialog;
 
 import java.util.ArrayList;
 import java.util.List;
 
-class SubscriptionGroupMenuProvider extends ContextMenuProvider {
+public class SubscriptionGroupMenuProvider extends ContextMenuProvider {
     private final Context mContext;
+    private final ChannelGroupService mService;
 
     public SubscriptionGroupMenuProvider(@NonNull Context context, int idx) {
         super(idx);
         mContext = context;
+        mService = ChannelGroupService.instance(context);
     }
 
     @Override
@@ -63,22 +65,25 @@ class SubscriptionGroupMenuProvider extends ContextMenuProvider {
     private void showGroupDialog(Video item) {
         AppDialogPresenter dialogPresenter = AppDialogPresenter.instance(mContext);
 
-        List<ChannelGroup> groups = GeneralData.instance(mContext).getChannelGroups();
+        List<ChannelGroup> groups = mService.getChannelGroups();
 
         List<OptionItem> options = new ArrayList<>();
 
         options.add(UiOptionItem.from(mContext.getString(R.string.new_subscriptions_group), optionItem -> {
             dialogPresenter.closeDialog();
-            SimpleEditDialog.show(mContext, mContext.getString(R.string.new_subscriptions_group), newValue -> {
-                if (GeneralData.instance(mContext).findChannelGroup(newValue) != null) {
-                    return false;
-                }
+            SimpleEditDialog.show(mContext,
+                    mContext.getString(R.string.new_subscriptions_group),
+                    null,
+                    newValue -> {
+                        if (mService.findChannelGroup(newValue) != null) {
+                            return false;
+                        }
 
-                ChannelGroup group = new ChannelGroup(newValue, null, new Channel(item.getAuthor(), item.cardImageUrl, item.channelId));
-                GeneralData.instance(mContext).addChannelGroup(group);
-                BrowsePresenter.instance(mContext).pinItem(Video.from(group));
-                return true;
-            }, mContext.getString(R.string.new_subscriptions_group), true);
+                        ChannelGroup group = new ChannelGroup(newValue, null, new Channel(item.getAuthor(), item.cardImageUrl, item.channelId));
+                        mService.addChannelGroup(group);
+                        BrowsePresenter.instance(mContext).pinItem(Video.from(group));
+                        return true;
+                    });
         }, false));
 
         for (ChannelGroup group : groups) {
@@ -90,10 +95,10 @@ class SubscriptionGroupMenuProvider extends ContextMenuProvider {
                 }
 
                 if (!group.isEmpty()) {
-                    GeneralData.instance(mContext).addChannelGroup(group);
+                    mService.addChannelGroup(group);
                     BrowsePresenter.instance(mContext).pinItem(Video.from(group));
                 } else {
-                    GeneralData.instance(mContext).removeChannelGroup(group);
+                    mService.removeChannelGroup(group);
                     BrowsePresenter.instance(mContext).unpinItem(Video.from(group));
                 }
             }, group.contains(item.channelId)));

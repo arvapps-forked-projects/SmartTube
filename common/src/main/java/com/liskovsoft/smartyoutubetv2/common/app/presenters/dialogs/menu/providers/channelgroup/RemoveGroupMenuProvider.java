@@ -1,31 +1,24 @@
-package com.liskovsoft.smartyoutubetv2.common.app.presenters.dialogs.menu.providers;
+package com.liskovsoft.smartyoutubetv2.common.app.presenters.dialogs.menu.providers.channelgroup;
 
 import android.content.Context;
 
 import androidx.annotation.NonNull;
 
-import com.liskovsoft.sharedutils.helpers.MessageHelpers;
 import com.liskovsoft.smartyoutubetv2.common.R;
 import com.liskovsoft.smartyoutubetv2.common.app.models.data.Video;
-import com.liskovsoft.smartyoutubetv2.common.app.models.playback.ui.OptionItem;
-import com.liskovsoft.smartyoutubetv2.common.app.models.playback.ui.UiOptionItem;
 import com.liskovsoft.smartyoutubetv2.common.app.presenters.AppDialogPresenter;
 import com.liskovsoft.smartyoutubetv2.common.app.presenters.BrowsePresenter;
-import com.liskovsoft.smartyoutubetv2.common.app.presenters.dialogs.menu.providers.ChannelGroup.Channel;
-import com.liskovsoft.smartyoutubetv2.common.misc.MediaServiceManager;
-import com.liskovsoft.smartyoutubetv2.common.prefs.GeneralData;
+import com.liskovsoft.smartyoutubetv2.common.app.presenters.dialogs.menu.providers.ContextMenuProvider;
 import com.liskovsoft.smartyoutubetv2.common.utils.AppDialogUtil;
-import com.liskovsoft.smartyoutubetv2.common.utils.SimpleEditDialog;
 
-import java.util.ArrayList;
-import java.util.List;
-
-class RemoveGroupMenuProvider extends ContextMenuProvider {
+public class RemoveGroupMenuProvider extends ContextMenuProvider {
     private final Context mContext;
+    private final ChannelGroupService mService;
 
     public RemoveGroupMenuProvider(@NonNull Context context, int idx) {
         super(idx);
         mContext = context;
+        mService = ChannelGroupService.instance(context);
     }
 
     @Override
@@ -36,8 +29,8 @@ class RemoveGroupMenuProvider extends ContextMenuProvider {
     @Override
     public void onClicked(Video item) {
         AppDialogUtil.showConfirmationDialog(mContext, mContext.getString(R.string.unpin_group_from_sidebar), () -> {
-            GeneralData.instance(mContext).removeChannelGroup(
-                    GeneralData.instance(mContext).findChannelGroup(item.channelGroupId)
+            mService.removeChannelGroup(
+                    mService.findChannelGroup(item.channelGroupId)
             );
             BrowsePresenter.instance(mContext).unpinItem(item);
             AppDialogPresenter.instance(mContext).closeDialog();

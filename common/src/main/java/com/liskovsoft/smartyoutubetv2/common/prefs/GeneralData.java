@@ -4,17 +4,14 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.os.Build;
 import com.liskovsoft.mediaserviceinterfaces.yt.data.MediaGroup;
+import com.liskovsoft.sharedutils.helpers.DateHelper;
 import com.liskovsoft.sharedutils.helpers.Helpers;
 import com.liskovsoft.sharedutils.locale.LocaleUtility;
 import com.liskovsoft.sharedutils.prefs.GlobalPreferences;
 import com.liskovsoft.smartyoutubetv2.common.R;
 import com.liskovsoft.smartyoutubetv2.common.app.models.data.Video;
-import com.liskovsoft.smartyoutubetv2.common.app.presenters.dialogs.menu.providers.ChannelGroup;
-import com.liskovsoft.smartyoutubetv2.common.app.presenters.dialogs.menu.providers.ChannelGroup.Channel;
 import com.liskovsoft.smartyoutubetv2.common.prefs.AppPrefs.ProfileChangeListener;
-import com.liskovsoft.smartyoutubetv2.common.utils.Utils;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -103,7 +100,6 @@ public class GeneralData implements ProfileChangeListener {
     private boolean mIsFirstUseTooltipEnabled;
     private boolean mIsDeviceSpecificBackupEnabled;
     private boolean mIsAutoBackupEnabled;
-    private List<ChannelGroup> mChannelGroups;
 
     private GeneralData(Context context) {
         mContext = context;
@@ -685,7 +681,8 @@ public class GeneralData implements ProfileChangeListener {
     }
 
     public int getTimeFormat() {
-        return mTimeFormat != -1 ? mTimeFormat : LocaleUtility.is24HourLocale(mContext) ? TIME_FORMAT_24 : TIME_FORMAT_12;
+        //return mTimeFormat != -1 ? mTimeFormat : LocaleUtility.is24HourLocale(mContext) ? TIME_FORMAT_24 : TIME_FORMAT_12;
+        return mTimeFormat != -1 ? mTimeFormat : DateHelper.is24HourLocale(LocaleUtility.getCurrentLocale(mContext)) ? TIME_FORMAT_24 : TIME_FORMAT_12;
     }
 
     public void enableProxy(boolean enable) {
@@ -963,77 +960,6 @@ public class GeneralData implements ProfileChangeListener {
         return mIsAutoBackupEnabled;
     }
 
-    public List<ChannelGroup> getChannelGroups() {
-        return mChannelGroups;
-    }
-
-    public void addChannelGroup(ChannelGroup group) {
-        if (!mChannelGroups.contains(group)) {
-            mChannelGroups.add(group);
-        }
-        persistState();
-    }
-
-    public void removeChannelGroup(ChannelGroup group) {
-        if (mChannelGroups.contains(group)) {
-            mChannelGroups.remove(group);
-            persistState();
-        }
-    }
-
-    public String[] getChannelGroupIds(int channelGroupId) {
-        if (channelGroupId == -1) {
-            return null;
-        }
-
-        List<String> result = new ArrayList<>();
-
-        ChannelGroup channelGroup = null;
-
-        for (ChannelGroup group : getChannelGroups()) {
-            if (group.id == channelGroupId) {
-                channelGroup = group;
-                break;
-            }
-        }
-
-        if (channelGroup != null) {
-            for (Channel channel : channelGroup.channels) {
-                result.add(channel.channelId);
-            }
-        }
-
-        return result.toArray(new String[]{});
-    }
-
-    public ChannelGroup findChannelGroup(int channelGroupId) {
-        if (channelGroupId == -1) {
-            return null;
-        }
-
-        for (ChannelGroup group : getChannelGroups()) {
-            if (group.id == channelGroupId) {
-                return group;
-            }
-        }
-
-        return null;
-    }
-
-    public ChannelGroup findChannelGroup(String title) {
-        if (title == null) {
-            return null;
-        }
-
-        for (ChannelGroup group : getChannelGroups()) {
-            if (Helpers.equals(group.title, title)) {
-                return group;
-            }
-        }
-
-        return null;
-    }
-
     private void initSections() {
         mDefaultSections.put(R.string.header_notifications, MediaGroup.TYPE_NOTIFICATIONS);
         mDefaultSections.put(R.string.header_home, MediaGroup.TYPE_HOME);
@@ -1061,12 +987,6 @@ public class GeneralData implements ProfileChangeListener {
 
             value.videoId = null;
             return !value.hasPlaylist() && value.channelId == null && value.sectionId == -1 && value.channelGroupId == -1 && !value.hasReloadPageKey();
-        });
-    }
-
-    private void cleanupChannelGroups() {
-        Helpers.removeIf(mChannelGroups, value -> {
-            return !mPinnedItems.contains(Video.from(value));
         });
     }
 
@@ -1151,7 +1071,6 @@ public class GeneralData implements ProfileChangeListener {
         mIsDeviceSpecificBackupEnabled = Helpers.parseBoolean(split, 65, false);
         mIsAutoBackupEnabled = Helpers.parseBoolean(split, 66, false);
         mIsRemapPageDownToSpeedEnabled = Helpers.parseBoolean(split, 67, false);
-        mChannelGroups = Helpers.parseList(split, 68, ChannelGroup::fromString);
 
         if (mPinnedItems.isEmpty()) {
             initPinnedItems();
@@ -1161,7 +1080,6 @@ public class GeneralData implements ProfileChangeListener {
         enableSection(MediaGroup.TYPE_SETTINGS, true);
 
         cleanupPinnedItems();
-        cleanupChannelGroups();
     }
 
     private void initPinnedItems() {
@@ -1186,7 +1104,7 @@ public class GeneralData implements ProfileChangeListener {
                 mIsRemapDpadUpToVolumeEnabled, mIsRemapDpadLeftToVolumeEnabled, mIsRemapNextToFastForwardEnabled, mIsHideWatchedFromNotificationsEnabled,
                 mChangelog, mPlayerExitShortcut, mIsOldChannelLookEnabled, mIsFullscreenModeEnabled, mIsHideWatchedFromWatchLaterEnabled,
                 mRememberPinnedPosition, mSelectedItems, mIsFirstUseTooltipEnabled, mIsDeviceSpecificBackupEnabled, mIsAutoBackupEnabled,
-                mIsRemapPageDownToSpeedEnabled, mChannelGroups));
+                mIsRemapPageDownToSpeedEnabled));
     }
 
     private int getSectionId(Video item) {
@@ -1194,7 +1112,7 @@ public class GeneralData implements ProfileChangeListener {
             return -1;
         }
 
-        return item.sectionId == -1 ? item.hashCode() : item.sectionId;
+        return item.sectionId == -1 ? item.getId() : item.sectionId;
     }
 
     @Override
