@@ -420,6 +420,8 @@ public class BrowsePresenter extends BasePresenter<BrowseView> implements Sectio
                 } else if (action == VideoMenuCallback.ACTION_UNSUBSCRIBE && isSubscriptionsSection()) {
                     removeItemAuthor(videoItem);
                     VideoMenuPresenter.instance(getContext()).closeDialog();
+                } else if (action == VideoMenuCallback.ACTION_REMOVE_AUTHOR) {
+                    removeItemAuthor(videoItem);
                 }
             });
         }
@@ -861,6 +863,10 @@ public class BrowsePresenter extends BasePresenter<BrowseView> implements Sectio
         return item.belongsToChannelUploads() && !item.hasVideo();
     }
 
+    public BrowseSection getCurrentSection() {
+        return mCurrentSection;
+    }
+
     private BrowseSection findSectionById(int sectionId) {
         for (BrowseSection section : mErrorSections) {
             if (section.getId() == sectionId) {
@@ -1077,7 +1083,7 @@ public class BrowsePresenter extends BasePresenter<BrowseView> implements Sectio
 
     private BrowseSection createPinnedSection(Video item) {
         return new BrowseSection(
-                item.getId(), item.getTitle(), enableRows(item) ? BrowseSection.TYPE_ROW : BrowseSection.TYPE_GRID, item.getCardImageUrl(), false, item);
+                item.getId(), item.getTitle(), enableRows(item) ? BrowseSection.TYPE_ROW : BrowseSection.TYPE_GRID, R.drawable.icon_pin, item.getCardImageUrl(), false, item);
     }
 
     private boolean enableRows(Video item) {
