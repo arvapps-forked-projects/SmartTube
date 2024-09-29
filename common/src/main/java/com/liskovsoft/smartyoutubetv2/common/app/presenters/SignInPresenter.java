@@ -52,7 +52,8 @@ public class SignInPresenter extends BasePresenter<SignInView> {
         }
 
         if (mPresenter == null) {
-            throw new IllegalStateException("At least one nested sign in presenter should be initialized.");
+            mPresenter = YTSignInPresenter.instance(getContext());
+            //throw new IllegalStateException("At least one nested sign in presenter should be initialized.");
         }
 
         mPresenter.setView(getView());
