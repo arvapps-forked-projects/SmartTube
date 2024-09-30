@@ -79,6 +79,7 @@ import com.liskovsoft.smartyoutubetv2.tv.ui.playback.previewtimebar.StoryboardSe
 import com.liskovsoft.smartyoutubetv2.tv.ui.widgets.chat.LiveChatView;
 import com.liskovsoft.smartyoutubetv2.tv.ui.widgets.time.DateTimeView;
 import com.liskovsoft.smartyoutubetv2.tv.ui.widgets.time.EndingTimeView;
+import com.liskovsoft.youtubeapi.common.helpers.YouTubeHelper;
 
 import java.io.InputStream;
 import java.util.HashMap;
@@ -334,6 +335,8 @@ public class PlaybackFragment extends SeekModePlaybackFragment implements Playba
         }
 
         releasePlayer();
+        // Improve memory usage??? Player may hangs on a second after close
+        Runtime.getRuntime().gc();
         initializePlayer();
     }
 
@@ -383,7 +386,7 @@ public class PlaybackFragment extends SeekModePlaybackFragment implements Playba
             Log.d(TAG, "releasePlayer: Start releasing player engine...");
             mPlaybackPresenter.onEngineReleased();
             destroyPlayerObjects();
-            // Improve memory usage??? May cause early view destroy on some devices.
+            // Improve memory usage??? Player may hangs on a second after close
             //Runtime.getRuntime().gc();
         }
     }
@@ -407,6 +410,9 @@ public class PlaybackFragment extends SeekModePlaybackFragment implements Playba
         }
         if (mMediaSession != null) {
             mMediaSession.release();
+        }
+        if (mRowsAdapter != null) {
+            mRowsAdapter.clear();
         }
         setAdapter(null); // PlayerGlue->LeanbackPlayerAdapter->Context memory leak fix
         mPlayer = null;
@@ -875,7 +881,7 @@ public class PlaybackFragment extends SeekModePlaybackFragment implements Playba
         CharSequence result = null;
 
         if (video != null) {
-            result = TextUtils.concat(video.getTitle(), " ", Video.TERTIARY_TEXT_DELIM, " ", video.getAuthor());
+            result = YouTubeHelper.createInfo(video.getTitle(), video.getAuthor());
         }
 
         return result;

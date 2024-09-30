@@ -20,11 +20,11 @@ import com.liskovsoft.smartyoutubetv2.common.utils.SimpleEditDialog;
 import java.util.ArrayList;
 import java.util.List;
 
-public class SubscriptionGroupMenuProvider extends ContextMenuProvider {
+public class ChannelGroupMenuProvider extends ContextMenuProvider {
     private final Context mContext;
     private final ChannelGroupService mService;
 
-    public SubscriptionGroupMenuProvider(@NonNull Context context, int idx) {
+    public ChannelGroupMenuProvider(@NonNull Context context, int idx) {
         super(idx);
         mContext = context;
         mService = ChannelGroupService.instance(context);

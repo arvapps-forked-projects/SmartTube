@@ -6,6 +6,7 @@ import android.text.TextUtils;
 import com.liskovsoft.mediaserviceinterfaces.yt.data.Account;
 import com.liskovsoft.sharedutils.prefs.SharedPreferencesBase;
 import com.liskovsoft.smartyoutubetv2.common.R;
+import com.liskovsoft.smartyoutubetv2.common.app.presenters.service.SidebarService;
 import com.liskovsoft.smartyoutubetv2.common.misc.MediaServiceManager;
 import com.liskovsoft.smartyoutubetv2.common.misc.MediaServiceManager.AccountChangeListener;
 
@@ -22,6 +23,7 @@ public class AppPrefs extends SharedPreferencesBase implements AccountChangeList
     private static final String MULTI_PROFILES = "multi_profiles";
     private static final String STATE_UPDATER_DATA = "state_updater_data";
     private static final String CHANNEL_GROUP_DATA = "channel_group_data";
+    private static final String SIDEBAR_DATA = "sidebar_data";
     private static final String VIEW_MANAGER_DATA = "view_manager_data";
     private static final String WEB_PROXY_URI = "web_proxy_uri";
     private static final String WEB_PROXY_ENABLED = "web_proxy_enabled";
@@ -103,6 +105,16 @@ public class AppPrefs extends SharedPreferencesBase implements AccountChangeList
         setData(getProfileKey(CHANNEL_GROUP_DATA, true), data);
     }
 
+    public String getSidebarData() {
+        // Always use multiple profiles
+        return getData(getProfileKey(SIDEBAR_DATA, true));
+    }
+
+    public void setSidebarData(String data) {
+        // Always use multiple profiles
+        setData(getProfileKey(SIDEBAR_DATA, true), data);
+    }
+
     public void setProfileData(String key, String data) {
         setData(getProfileKey(key, isMultiProfilesEnabled()), data);
     }
@@ -179,6 +191,8 @@ public class AppPrefs extends SharedPreferencesBase implements AccountChangeList
         if (!mListeners.contains(listener)) {
             if (listener instanceof GeneralData) {
                 mListeners.add(0, listener); // data classes should be called before regular listeners
+            } else if (listener instanceof SidebarService) {
+                mListeners.add(mListeners.isEmpty() ? 0 : 1, listener); // data classes should be called before regular listeners
             } else {
                 mListeners.add(listener);
             }
