@@ -154,7 +154,7 @@ public class VideoGroup {
     }
 
     public List<Video> getVideos() {
-        return mVideos;
+        return Collections.unmodifiableList(mVideos);
     }
 
     public String getTitle() {
@@ -357,7 +357,7 @@ public class VideoGroup {
         return mVideos.get(idx);
     }
 
-    public void remove(Video video) {
+    public synchronized void remove(Video video) {
         if (mVideos == null) {
             return;
         }
