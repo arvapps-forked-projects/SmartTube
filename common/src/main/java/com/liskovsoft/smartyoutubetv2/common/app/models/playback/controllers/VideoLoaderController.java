@@ -472,11 +472,12 @@ public class VideoLoaderController extends BasePlayerController implements OnDat
 
         if (Helpers.startsWithAny(message, "Unable to connect to")) {
             // No internet connection
-            if (!mPlayerTweaksData.isNetworkErrorFixingDisabled()) {
-                mPlayerTweaksData.setPlayerDataSource(getNextEngine()); // ???
-            } else {
-                restartEngine = false;
-            }
+            //if (!mPlayerTweaksData.isNetworkErrorFixingDisabled()) {
+            //    mPlayerTweaksData.setPlayerDataSource(getNextEngine()); // ???
+            //} else {
+            //    restartEngine = false;
+            //}
+            restartEngine = false;
             MessageHelpers.showLongMessage(getContext(), shortErrorMsg);
             return restartEngine;
         }
@@ -524,11 +525,13 @@ public class VideoLoaderController extends BasePlayerController implements OnDat
             // "Response code: 404", "Response code: 429", "Invalid integer size",
             // "Unexpected ArrayIndexOutOfBoundsException", "Unexpected IndexOutOfBoundsException"
             // "Response code: 403" (url deciphered incorrectly)
-            if (!mPlayerTweaksData.isNetworkErrorFixingDisabled()) {
-                mPlayerTweaksData.setPlayerDataSource(getNextEngine());
-            } else {
-                restartEngine = false;
-            }
+            YouTubeServiceManager.instance().applyAntiBotFix();
+            restartEngine = false;
+            //if (!mPlayerTweaksData.isNetworkErrorFixingDisabled()) {
+            //    mPlayerTweaksData.setPlayerDataSource(getNextEngine());
+            //} else {
+            //    restartEngine = false;
+            //}
         } else if (type == PlayerEventListener.ERROR_TYPE_RENDERER && rendererIndex == PlayerEventListener.RENDERER_INDEX_SUBTITLE) {
             // "Response code: 500"
             if (mLastVideo != null) {
