@@ -30,6 +30,7 @@ import java.util.List;
  * Video is an object that holds the various metadata associated with a single video.
  */
 public final class Video {
+    public static final String PLAYLIST_LIKED_MUSIC = "LM";
     public static final String TERTIARY_TEXT_DELIM = "•";
     public static final long MAX_LIVE_DURATION_MS = 24 * 60 * 60 * 1_000;
     private static final int MAX_AUTHOR_LENGTH_CHARS = 20;
@@ -851,6 +852,7 @@ public final class Video {
 
     public boolean isSectionPlaylistEnabled(Context context) {
         return PlayerTweaksData.instance(context).isSectionPlaylistEnabled() && getGroup() != null &&
-                (playlistId == null || nextMediaItem == null || belongsToSearch()) && (!isRemote || remotePlaylistId == null);
+                (playlistId == null || PLAYLIST_LIKED_MUSIC.equals(playlistId) || nextMediaItem == null || belongsToSearch()) &&
+                    (!isRemote || remotePlaylistId == null);
     }
 }
