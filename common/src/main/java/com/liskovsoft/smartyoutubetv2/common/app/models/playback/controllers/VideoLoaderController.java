@@ -129,7 +129,7 @@ public class VideoLoaderController extends BasePlayerController implements OnDat
                 getPlayer().getDurationMs() - getPlayer().getPositionMs() < STREAM_END_THRESHOLD_MS) {
             getMainController().onPlayEnd();
         } else {
-            MessageHelpers.showLongMessage(getContext(), R.string.applying_fix);
+            //MessageHelpers.showLongMessage(getContext(), R.string.applying_fix);
             YouTubeServiceManager.instance().applyAntiBotFix(); // bot check error?
             reloadVideo();
         }
@@ -481,11 +481,8 @@ public class VideoLoaderController extends BasePlayerController implements OnDat
             //    restartEngine = false;
             //}
             restartEngine = false;
-            MessageHelpers.showLongMessage(getContext(), shortErrorMsg);
-            return restartEngine;
-        }
-
-        if (error instanceof OutOfMemoryError) {
+            resultMsg = shortErrorMsg;
+        } else if (error instanceof OutOfMemoryError) {
             //if (mPlayerData.getVideoBufferType() == PlayerData.BUFFER_LOWEST) {
             //    mPlayerTweaksData.enableSectionPlaylist(false);
             //} else if (mPlayerData.getVideoBufferType() == PlayerData.BUFFER_LOW) {
