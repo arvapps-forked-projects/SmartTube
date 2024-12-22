@@ -10,6 +10,7 @@ import com.liskovsoft.mediaserviceinterfaces.yt.NotificationsService;
 import com.liskovsoft.mediaserviceinterfaces.yt.ServiceManager;
 import com.liskovsoft.mediaserviceinterfaces.yt.SignInService;
 import com.liskovsoft.mediaserviceinterfaces.yt.data.Account;
+import com.liskovsoft.mediaserviceinterfaces.yt.data.ChannelGroup;
 import com.liskovsoft.mediaserviceinterfaces.yt.data.MediaGroup;
 import com.liskovsoft.sharedutils.helpers.Helpers;
 import com.liskovsoft.sharedutils.helpers.ScreenHelper;
@@ -34,9 +35,7 @@ import com.liskovsoft.smartyoutubetv2.common.app.presenters.dialogs.menu.Channel
 import com.liskovsoft.smartyoutubetv2.common.app.presenters.dialogs.menu.SectionMenuPresenter;
 import com.liskovsoft.smartyoutubetv2.common.app.presenters.dialogs.menu.VideoMenuPresenter;
 import com.liskovsoft.smartyoutubetv2.common.app.presenters.dialogs.menu.VideoMenuPresenter.VideoMenuCallback;
-import com.liskovsoft.smartyoutubetv2.common.app.presenters.dialogs.menu.providers.channelgroup.ChannelGroup;
-import com.liskovsoft.smartyoutubetv2.common.app.presenters.dialogs.menu.providers.channelgroup.ChannelGroup.Channel;
-import com.liskovsoft.smartyoutubetv2.common.app.presenters.dialogs.menu.providers.channelgroup.ChannelGroupService;
+import com.liskovsoft.smartyoutubetv2.common.app.presenters.dialogs.menu.providers.channelgroup.ChannelGroupServiceWrapper;
 import com.liskovsoft.smartyoutubetv2.common.app.presenters.interfaces.SectionPresenter;
 import com.liskovsoft.smartyoutubetv2.common.app.presenters.interfaces.VideoGroupPresenter;
 import com.liskovsoft.smartyoutubetv2.common.app.presenters.service.SidebarService;
@@ -683,11 +682,7 @@ public class BrowsePresenter extends BasePresenter<BrowseView> implements Sectio
                         error -> {
                             Log.e(TAG, "updateRowsHeader error: %s", error.getMessage());
                             handleLoadError(error);
-                        },
-                        () -> {
-                            if (getView() != null)
-                                getView().showProgressBar(false);
-                        });
+                        }, this::handleEmptyResults);
 
         mActions.add(updateAction);
     }
@@ -738,11 +733,7 @@ public class BrowsePresenter extends BasePresenter<BrowseView> implements Sectio
                         error -> {
                             Log.e(TAG, "updateGridHeader error: %s", error.getMessage());
                             handleLoadError(error);
-                        },
-                        () -> {
-                            if (getView() != null)
-                                getView().showProgressBar(false);
-                        });
+                        }, this::handleEmptyResults);
 
         mActions.add(updateAction);
     }
@@ -823,9 +814,9 @@ public class BrowsePresenter extends BasePresenter<BrowseView> implements Sectio
                                     videoGroup.setType(MediaGroup.TYPE_HISTORY);
                                     appendLocalHistory(videoGroup);
                                     getView().updateSection(videoGroup);
-                                } else if (isSubscriptionsSection() && !ChannelGroupService.instance(getContext()).isEmpty()) {
+                                } else if (isSubscriptionsSection() && !ChannelGroupServiceWrapper.instance(getContext()).isEmpty()) {
                                     appendLocalSubscriptions();
-                                } else if (isMultiGridChannelUploadsSection() && !ChannelGroupService.instance(getContext()).isEmpty()) {
+                                } else if (isMultiGridChannelUploadsSection() && !ChannelGroupServiceWrapper.instance(getContext()).isEmpty()) {
                                     getView().showProgressBar(false);
                                     appendLocalChannels();
                                 } else if (getView().isProgressBarShowing()) {
@@ -985,7 +976,7 @@ public class BrowsePresenter extends BasePresenter<BrowseView> implements Sectio
 
     private Observable<MediaGroup> createPinnedGridAction(Video item) {
         if (item.channelGroupId != -1) {
-            return mContentService.getSubscriptionsObserve(ChannelGroupService.instance(getContext()).getChannelGroupIds(item.channelGroupId));
+            return mContentService.getSubscriptionsObserve(ChannelGroupServiceWrapper.instance(getContext()).getChannelGroupIds(item.channelGroupId));
         }
 
         return ChannelUploadsPresenter.instance(getContext()).obtainUploadsObservable(item);
@@ -1113,10 +1104,16 @@ public class BrowsePresenter extends BasePresenter<BrowseView> implements Sectio
             getView().showError(new CategoryEmptyError(getContext(), error));
             Utils.postDelayed(mRefreshSection, 30_000);
         }
-        //if (isHomeSection()) { // maybe the history turned off?
-        //    MediaServiceManager.instance().enableHistory(true);
-        //    mGeneralData.enableHistory(true);
-        //}
+    }
+
+    private void handleEmptyResults() {
+        if (getView() != null) {
+            getView().showProgressBar(false);
+        }
+        if (getView() != null && getView().isEmpty()) {
+            getView().showError(new SignInError(getContext()));
+            Utils.postDelayed(mRefreshSection, 30_000);
+        }
     }
 
     private void appendLocalHistory(@NonNull VideoGroup videoGroup) {
@@ -1145,14 +1142,14 @@ public class BrowsePresenter extends BasePresenter<BrowseView> implements Sectio
     private void appendLocalSubscriptions() {
         updateVideoGrid(getCurrentSection(),
                 mContentService.getSubscriptionsObserve(
-                        ChannelGroupService.instance(getContext()).getChannelGroupIds(ChannelGroupService.SUBSCRIPTION_GROUP_ID)), -1);
+                        ChannelGroupServiceWrapper.instance(getContext()).getChannelGroupIds(ChannelGroupServiceWrapper.SUBSCRIPTION_GROUP_ID)), -1);
     }
 
     private void appendLocalChannels() {
-        ChannelGroup subscriptions = ChannelGroupService.instance(getContext()).findChannelGroup(ChannelGroupService.SUBSCRIPTION_GROUP_ID);
+        ChannelGroup subscriptions = ChannelGroupServiceWrapper.instance(getContext()).findChannelGroup(ChannelGroupServiceWrapper.SUBSCRIPTION_GROUP_ID);
         if (subscriptions != null) {
             List<Video> channels = new ArrayList<>();
-            for (Channel channel : subscriptions.channels) {
+            for (ChannelGroup.Channel channel : subscriptions.getChannels()) {
                 channels.add(Video.from(channel));
             }
             VideoGroup group = VideoGroup.from(channels, 0);
