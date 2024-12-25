@@ -682,7 +682,7 @@ public class BrowsePresenter extends BasePresenter<BrowseView> implements Sectio
                         error -> {
                             Log.e(TAG, "updateRowsHeader error: %s", error.getMessage());
                             handleLoadError(error);
-                        }, this::handleEmptyResults);
+                        }, () -> handleLoadError(null));
 
         mActions.add(updateAction);
     }
@@ -733,7 +733,7 @@ public class BrowsePresenter extends BasePresenter<BrowseView> implements Sectio
                         error -> {
                             Log.e(TAG, "updateGridHeader error: %s", error.getMessage());
                             handleLoadError(error);
-                        }, this::handleEmptyResults);
+                        }, () -> handleLoadError(null));
 
         mActions.add(updateAction);
     }
@@ -802,33 +802,25 @@ public class BrowsePresenter extends BasePresenter<BrowseView> implements Sectio
 
         getView().showProgressBar(true);
 
-        Disposable signCheckAction = mSignInService.isSignedObserve()
-                .subscribe(
-                        isSigned -> {
-                            if (isSigned) {
-                                callback.run();
-                            } else if (getView() != null) {
-                                if (isHistorySection() && !VideoStateService.instance(getContext()).isEmpty()) {
-                                    getView().showProgressBar(false);
-                                    VideoGroup videoGroup = VideoGroup.from(null, getCurrentSection(), -1);
-                                    videoGroup.setType(MediaGroup.TYPE_HISTORY);
-                                    appendLocalHistory(videoGroup);
-                                    getView().updateSection(videoGroup);
-                                } else if (isSubscriptionsSection() && !ChannelGroupServiceWrapper.instance(getContext()).isEmpty()) {
-                                    appendLocalSubscriptions();
-                                } else if (isMultiGridChannelUploadsSection() && !ChannelGroupServiceWrapper.instance(getContext()).isEmpty()) {
-                                    getView().showProgressBar(false);
-                                    appendLocalChannels();
-                                } else if (getView().isProgressBarShowing()) {
-                                    getView().showProgressBar(false);
-                                    getView().showError(new SignInError(getContext()));
-                                }
-                            }
-                        },
-                        error -> Log.e(TAG, "authCheck error: %s", error.getMessage())
-                );
-
-        mActions.add(signCheckAction);
+        if (mSignInService.isSigned()) {
+            callback.run();
+        } else if (getView() != null) {
+            if (isHistorySection() && !VideoStateService.instance(getContext()).isEmpty()) {
+                getView().showProgressBar(false);
+                VideoGroup videoGroup = VideoGroup.from(null, getCurrentSection(), -1);
+                videoGroup.setType(MediaGroup.TYPE_HISTORY);
+                appendLocalHistory(videoGroup);
+                getView().updateSection(videoGroup);
+            } else if (isSubscriptionsSection() && !ChannelGroupServiceWrapper.instance(getContext()).isEmpty()) {
+                appendLocalSubscriptions();
+            } else if (isMultiGridChannelUploadsSection() && !ChannelGroupServiceWrapper.instance(getContext()).isEmpty()) {
+                getView().showProgressBar(false);
+                appendLocalChannels();
+            } else if (getView().isProgressBarShowing()) {
+                getView().showProgressBar(false);
+                getView().showError(new SignInError(getContext()));
+            }
+        }
     }
 
     /**
@@ -1097,21 +1089,23 @@ public class BrowsePresenter extends BasePresenter<BrowseView> implements Sectio
     }
 
     private void handleLoadError(Throwable error) {
-        if (getView() != null) {
-            getView().showProgressBar(false);
+        if (getView() == null) {
+            return;
         }
-        if (getView() != null && getView().isEmpty()) {
-            getView().showError(new CategoryEmptyError(getContext(), error));
-            Utils.postDelayed(mRefreshSection, 30_000);
-        }
-    }
 
-    private void handleEmptyResults() {
-        if (getView() != null) {
-            getView().showProgressBar(false);
-        }
-        if (getView() != null && getView().isEmpty()) {
-            getView().showError(new SignInError(getContext()));
+        getView().showProgressBar(false);
+
+        if (getView().isEmpty()) {
+            ErrorFragmentData errorFragmentData;
+            if (error != null) {
+                errorFragmentData = new CategoryEmptyError(getContext(), error);
+            } else if (mSignInService.isSigned()) {
+                errorFragmentData = new CategoryEmptyError(getContext(), null);
+            } else {
+                errorFragmentData = new SignInError(getContext());
+            }
+
+            getView().showError(errorFragmentData);
             Utils.postDelayed(mRefreshSection, 30_000);
         }
     }
