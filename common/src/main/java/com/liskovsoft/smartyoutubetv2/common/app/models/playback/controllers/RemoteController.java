@@ -1,6 +1,7 @@
 package com.liskovsoft.smartyoutubetv2.common.app.models.playback.controllers;
 
 import android.content.Context;
+import android.database.ContentObserver;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.KeyEvent;
@@ -27,6 +28,7 @@ import io.reactivex.disposables.Disposable;
 
 public class RemoteController extends BasePlayerController implements OnDataChange {
     private static final String TAG = RemoteController.class.getSimpleName();
+    private static final boolean NORMALIZE = false;
     private final RemoteControlService mRemoteControlService;
     private final RemoteControlData mRemoteControlData;
     private Disposable mListeningAction;
@@ -38,6 +40,7 @@ public class RemoteController extends BasePlayerController implements OnDataChan
     private long mNewVideoPositionMs;
     private Disposable mActionDown;
     private Disposable mActionUp;
+    private ContentObserver mVolumeObserver;
 
     public RemoteController(Context context) {
         // Start receiving a commands as early as possible
@@ -80,6 +83,9 @@ public class RemoteController extends BasePlayerController implements OnDataChan
 
         postStartPlaying(item, getPlayer().getPlayWhenReady());
         mVideo = item;
+        if (mConnected) {
+            mRemoteControlData.setLastVideo(mVideo);
+        }
     }
 
     @Override
@@ -222,6 +228,7 @@ public class RemoteController extends BasePlayerController implements OnDataChan
 
     private void stopListening() {
         RxHelper.disposeActions(mListeningAction, mPostStartPlayAction, mPostStateAction, mPostVolumeAction);
+        unregisterVolumeObserver();
     }
 
     private void processCommand(Command command) {
@@ -293,7 +300,8 @@ public class RemoteController extends BasePlayerController implements OnDataChan
                     //postStartPlaying(getController().getVideo(), false);
                     postPlay(false);
                 } else {
-                    openNewVideo(mVideo);
+                    // Already connected
+                    openNewVideo(mVideo != null ? mVideo : mRemoteControlData.getLastVideo());
                 }
                 break;
             case Command.TYPE_NEXT:
@@ -323,10 +331,10 @@ public class RemoteController extends BasePlayerController implements OnDataChan
                 break;
             case Command.TYPE_VOLUME:
                 //Utils.setGlobalVolume(getActivity(), command.getVolume());
-                Utils.setVolume(getContext(), getPlayer(), command.getVolume(), true);
+                Utils.setVolume(getContext(), getPlayer(), command.getVolume(), NORMALIZE);
 
                 //postVolumeChange(Utils.getGlobalVolume(getActivity()));
-                postVolumeChange(Utils.getVolume(getContext(), getPlayer(), true)); // Just in case volume cannot be changed (e.g. Fire TV stick)
+                postVolumeChange(Utils.getVolume(getContext(), getPlayer(), NORMALIZE)); // Just in case volume cannot be changed (e.g. Fire TV stick)
                 break;
             case Command.TYPE_STOP:
                 // Close player
@@ -349,6 +357,7 @@ public class RemoteController extends BasePlayerController implements OnDataChan
                 //if (mRemoteControlData.isConnectMessagesEnabled()) {
                 //    MessageHelpers.showLongMessage(getActivity(), getActivity().getString(R.string.device_connected, command.getDeviceName()));
                 //}
+                registerVolumeObserver();
                 break;
             case Command.TYPE_DISCONNECTED:
                 // NOTE: there are possible false calls when mobile client unloaded from the memory.
@@ -360,6 +369,11 @@ public class RemoteController extends BasePlayerController implements OnDataChan
                 //if (mRemoteControlData.isConnectMessagesEnabled()) {
                 //    MessageHelpers.showLongMessage(getContext(), getContext().getString(R.string.device_disconnected, command.getDeviceName()));
                 //}
+                unregisterVolumeObserver();
+                break;
+            case Command.TYPE_IDLE:
+                // Already connected
+                registerVolumeObserver();
                 break;
             case Command.TYPE_DPAD:
                 int key = KeyEvent.KEYCODE_UNKNOWN;
@@ -411,14 +425,6 @@ public class RemoteController extends BasePlayerController implements OnDataChan
         }
     }
 
-    @Override
-    public boolean onKeyDown(int keyCode) {
-        //postVolumeChange(Utils.getGlobalVolume(getActivity()));
-        postVolumeChange(Utils.getVolume(getContext(), getPlayer(), true));
-
-        return false;
-    }
-
     private void openNewVideo(Video newVideo) {
         if (Video.equals(mVideo, newVideo) && ViewManager.instance(getContext()).isPlayerInForeground()) { // same video already playing
             //mVideo.playlistId = newVideo.playlistId;
@@ -440,6 +446,29 @@ public class RemoteController extends BasePlayerController implements OnDataChan
         // Device wake fix when player isn't started yet or been closed
         if (getPlayer() == null || !Utils.checkActivity(getActivity())) {
             new Handler(Looper.myLooper()).postDelayed(() -> ViewManager.instance(getContext()).movePlayerToForeground(), 5_000);
+        }
+    }
+
+    private void registerVolumeObserver() {
+        if (mVolumeObserver != null) {
+            return;
+        }
+
+        mVolumeObserver = new ContentObserver(Utils.sHandler) {
+            @Override
+            public void onChange(boolean selfChange) {
+                postVolumeChange(Utils.getVolume(getContext(), getPlayer(), NORMALIZE));
+            }
+        };
+        Utils.registerAudioObserver(getContext(), mVolumeObserver);
+
+        postVolumeChange(Utils.getVolume(getContext(), getPlayer(), NORMALIZE));
+    }
+
+    private void unregisterVolumeObserver() {
+        if (mVolumeObserver != null) {
+            Utils.unregisterAudioObserver(getContext(), mVolumeObserver);
+            mVolumeObserver = null;
         }
     }
 }
