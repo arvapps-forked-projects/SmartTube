@@ -41,6 +41,7 @@ public class RemoteController extends BasePlayerController implements OnDataChan
     private Disposable mActionDown;
     private Disposable mActionUp;
     private ContentObserver mVolumeObserver;
+    private long mVolumeSelfChangeMs;
 
     public RemoteController(Context context) {
         // Start receiving a commands as early as possible
@@ -121,13 +122,13 @@ public class RemoteController extends BasePlayerController implements OnDataChan
 
     @Override
     public void onFinish() {
-        // User action detected. Stop remote session.
+        // User action detected. Hide remote playlist.
         mConnected = false;
         mVideo = null;
     }
 
     private void postStartPlaying(@Nullable Video item, boolean isPlaying) {
-        if (!mRemoteControlData.isDeviceLinkEnabled()) {
+        if (!mRemoteControlData.isDeviceLinkEnabled() || !isConnectedBefore()) {
             return;
         }
 
@@ -145,7 +146,7 @@ public class RemoteController extends BasePlayerController implements OnDataChan
     }
 
     private void postStartPlaying(String videoId, long positionMs, long durationMs, boolean isPlaying) {
-        if (!mRemoteControlData.isDeviceLinkEnabled()) {
+        if (!mRemoteControlData.isDeviceLinkEnabled() || !isConnectedBefore()) {
             return;
         }
 
@@ -157,7 +158,7 @@ public class RemoteController extends BasePlayerController implements OnDataChan
     }
 
     private void postState(long positionMs, long durationMs, boolean isPlaying) {
-        if (!mRemoteControlData.isDeviceLinkEnabled()) {
+        if (!mRemoteControlData.isDeviceLinkEnabled() || !isConnectedBefore()) {
             return;
         }
 
@@ -165,6 +166,18 @@ public class RemoteController extends BasePlayerController implements OnDataChan
 
         mPostStateAction = RxHelper.execute(
                 mRemoteControlService.postStateChangeObserve(positionMs, durationMs, isPlaying)
+        );
+    }
+
+    private void postVolumeChange(int volume) {
+        if (!mRemoteControlData.isDeviceLinkEnabled() || !isConnectedBefore()) {
+            return;
+        }
+
+        RxHelper.disposeActions(mPostVolumeAction);
+
+        mPostVolumeAction = RxHelper.execute(
+                mRemoteControlService.postVolumeChangeObserve(volume)
         );
     }
 
@@ -182,18 +195,6 @@ public class RemoteController extends BasePlayerController implements OnDataChan
 
     private void postIdle() {
         postState(-1, -1, false);
-    }
-
-    private void postVolumeChange(int volume) {
-        if (!mRemoteControlData.isDeviceLinkEnabled()) {
-            return;
-        }
-
-        RxHelper.disposeActions(mPostVolumeAction);
-
-        mPostVolumeAction = RxHelper.execute(
-                mRemoteControlService.postVolumeChangeObserve(volume)
-        );
     }
 
     private void tryListening() {
@@ -290,7 +291,8 @@ public class RemoteController extends BasePlayerController implements OnDataChan
                     //postStartPlaying(getController().getVideo(), true);
                     postPlay(true);
                 } else {
-                    openNewVideo(mVideo);
+                    // Already connected
+                    openNewVideo(mVideo != null ? mVideo : mRemoteControlData.getLastVideo());
                 }
                 break;
             case Command.TYPE_PAUSE:
@@ -330,11 +332,10 @@ public class RemoteController extends BasePlayerController implements OnDataChan
                 }
                 break;
             case Command.TYPE_VOLUME:
-                //Utils.setGlobalVolume(getActivity(), command.getVolume());
                 Utils.setVolume(getContext(), getPlayer(), command.getVolume(), NORMALIZE);
+                mVolumeSelfChangeMs = System.currentTimeMillis();
 
-                //postVolumeChange(Utils.getGlobalVolume(getActivity()));
-                postVolumeChange(Utils.getVolume(getContext(), getPlayer(), NORMALIZE)); // Just in case volume cannot be changed (e.g. Fire TV stick)
+                //postVolumeChange(Utils.getVolume(getContext(), getPlayer(), NORMALIZE)); // Just in case volume cannot be changed (e.g. Fire TV stick)
                 break;
             case Command.TYPE_STOP:
                 // Close player
@@ -358,6 +359,7 @@ public class RemoteController extends BasePlayerController implements OnDataChan
                 //    MessageHelpers.showLongMessage(getActivity(), getActivity().getString(R.string.device_connected, command.getDeviceName()));
                 //}
                 registerVolumeObserver();
+                mRemoteControlData.setConnectedBefore(true);
                 break;
             case Command.TYPE_DISCONNECTED:
                 // NOTE: there are possible false calls when mobile client unloaded from the memory.
@@ -370,10 +372,13 @@ public class RemoteController extends BasePlayerController implements OnDataChan
                 //    MessageHelpers.showLongMessage(getContext(), getContext().getString(R.string.device_disconnected, command.getDeviceName()));
                 //}
                 unregisterVolumeObserver();
+                mRemoteControlData.setConnectedBefore(false);
                 break;
             case Command.TYPE_IDLE:
                 // Already connected
-                registerVolumeObserver();
+                if (isConnectedBefore()) {
+                    registerVolumeObserver();
+                }
                 break;
             case Command.TYPE_DPAD:
                 int key = KeyEvent.KEYCODE_UNKNOWN;
@@ -457,7 +462,9 @@ public class RemoteController extends BasePlayerController implements OnDataChan
         mVolumeObserver = new ContentObserver(Utils.sHandler) {
             @Override
             public void onChange(boolean selfChange) {
-                postVolumeChange(Utils.getVolume(getContext(), getPlayer(), NORMALIZE));
+                if (System.currentTimeMillis() - mVolumeSelfChangeMs > 1_000) {
+                    postVolumeChange(Utils.getVolume(getContext(), getPlayer(), NORMALIZE));
+                }
             }
         };
         Utils.registerAudioObserver(getContext(), mVolumeObserver);
@@ -470,5 +477,9 @@ public class RemoteController extends BasePlayerController implements OnDataChan
             Utils.unregisterAudioObserver(getContext(), mVolumeObserver);
             mVolumeObserver = null;
         }
+    }
+
+    private boolean isConnectedBefore() {
+        return mConnected || mRemoteControlData.isConnectedBefore();
     }
 }
