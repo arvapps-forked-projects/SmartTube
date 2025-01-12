@@ -35,8 +35,6 @@ import com.liskovsoft.youtubeapi.service.YouTubeServiceManager;
 import java.util.ArrayList;
 import java.util.List;
 
-import io.reactivex.disposables.Disposable;
-
 public class SplashPresenter extends BasePresenter<SplashView> {
     private static final String TAG = SplashPresenter.class.getSimpleName();
     private static final long APP_INIT_DELAY_MS = 10_000;
@@ -45,9 +43,9 @@ public class SplashPresenter extends BasePresenter<SplashView> {
     private static boolean sRunOnce;
     private boolean mRunPerInstance;
     private final List<IntentProcessor> mIntentChain = new ArrayList<>();
-    private Disposable mRefreshCachePeriodicAction;
     private String mBridgePackageName;
     private final Runnable mRunBackgroundTasks = this::runBackgroundTasks;
+    private final Runnable mCheckForUpdates = this::checkForUpdates;
 
     private interface IntentProcessor {
         boolean process(Intent intent);
@@ -82,6 +80,8 @@ public class SplashPresenter extends BasePresenter<SplashView> {
 
         applyRunOnceTasks();
         applyRunPerInstanceTasks();
+        Utils.postDelayed(mCheckForUpdates, APP_INIT_DELAY_MS);
+        Utils.updateRemoteControlService(getContext());
 
         //runRefreshCachePeriodicTask();
 
@@ -89,7 +89,6 @@ public class SplashPresenter extends BasePresenter<SplashView> {
 
         showAccountSelectionIfNeeded(); // should be placed after Intent chain
         checkAccountPassword();
-        showUpdateNotification();
     }
 
     private void applyRunOnceTasks() {
@@ -106,7 +105,6 @@ public class SplashPresenter extends BasePresenter<SplashView> {
     private void applyRunPerInstanceTasks() {
         if (!mRunPerInstance) {
             mRunPerInstance = true;
-            //clearCache();
             Utils.postDelayed(mRunBackgroundTasks, APP_INIT_DELAY_MS);
             initIntentChain();
             // Fake service to prevent the app destroying?
@@ -138,7 +136,7 @@ public class SplashPresenter extends BasePresenter<SplashView> {
         }
     }
 
-    private void showUpdateNotification() {
+    private void checkForUpdates() {
         BootDialogPresenter updatePresenter = BootDialogPresenter.instance(getContext());
         updatePresenter.start();
         //updatePresenter.unhold();
