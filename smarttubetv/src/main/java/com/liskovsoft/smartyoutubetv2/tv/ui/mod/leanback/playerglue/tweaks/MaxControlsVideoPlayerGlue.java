@@ -54,7 +54,7 @@ public abstract class MaxControlsVideoPlayerGlue<T extends PlayerAdapter>
                         viewHolder.getTitle().setText(glue.getTitle());
                         viewHolder.getSubtitle().setText(glue.getSubtitle());
                         // MOD: add extra title line
-                        viewHolder.getBody().setText(glue.getBody());
+                        //viewHolder.getBody().setText(glue.getBody());
                     }
 
                     private void fixOverlappedTitle(ViewHolder viewHolder) {
@@ -175,12 +175,8 @@ public abstract class MaxControlsVideoPlayerGlue<T extends PlayerAdapter>
             getTransportViewHolder().setSeekPreviewTitle(title);
         }
         if (getDescriptionViewHolder() != null) { // the chapter title when show full ui
-            if (title != null) {
-                getDescriptionViewHolder().getBody().setText(title);
-                getDescriptionViewHolder().getBody().setVisibility(View.VISIBLE);
-            } else {
-                getDescriptionViewHolder().getBody().setVisibility(View.GONE);
-            }
+            getDescriptionViewHolder().getBody().setText(title);
+            getDescriptionViewHolder().getBody().setVisibility(title != null ? View.VISIBLE: View.GONE);
         }
     }
 
