@@ -37,7 +37,7 @@ import com.liskovsoft.smartyoutubetv2.common.prefs.PlayerData;
 import com.liskovsoft.smartyoutubetv2.common.prefs.PlayerTweaksData;
 import com.liskovsoft.youtubeapi.service.YouTubeMediaItemService;
 import com.liskovsoft.youtubeapi.service.YouTubeSignInService;
-import com.liskovsoft.youtubeapi.service.data.YouTubePlaylistInfo;
+import com.liskovsoft.youtubeapi.playlist.impl.YouTubePlaylistInfo;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -881,10 +881,10 @@ public class AppDialogUtil {
     }
 
     public static void showAddToPlaylistDialog(Context context, Video video, VideoMenuCallback callback) {
-        if (!YouTubeSignInService.instance().isSigned()) {
-            MessageHelpers.showMessage(context, R.string.msg_signed_users_only);
-            return;
-        }
+        //if (!YouTubeSignInService.instance().isSigned()) {
+        //    MessageHelpers.showMessage(context, R.string.msg_signed_users_only);
+        //    return;
+        //}
 
         if (video == null) {
             return;
