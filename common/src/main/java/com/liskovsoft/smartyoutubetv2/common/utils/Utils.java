@@ -264,7 +264,7 @@ public class Utils {
                 try {
                     audioManager.setStreamVolume(GLOBAL_VOLUME_TYPE, (int) newVolume, 0);
                     sCurrentVolume = volume;
-                } catch (SecurityException e) {
+                } catch (SecurityException | IllegalArgumentException e) {
                     // Not allowed to change Do Not Disturb state
                     e.printStackTrace();
                 }
@@ -292,6 +292,11 @@ public class Utils {
 
     public static void initVolume(Context context) {
         if (sGlobalVolumeFixed != null) {
+            return;
+        }
+
+        if ("D2150 (Nebula-Cosmos-Max)".equals(Helpers.getDeviceName())) { // A projector
+            sGlobalVolumeFixed = true;
             return;
         }
 
