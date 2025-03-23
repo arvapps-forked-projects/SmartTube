@@ -688,18 +688,38 @@ public class VideoLoaderController extends BasePlayerController implements OnDat
                 }
                 break;
             case PlayerEngineConstants.REPEAT_MODE_LIST:
-                // stop player (if not playing playlist)
+                // if video has a playlist load next or restart playlist
                 if (video.hasNextPlaylist() || mPlaylist.getNext() != null) {
                     loadNext();
                 } else {
-                    getPlayer().setPositionMs(getPlayer().getDurationMs());
-                    getPlayer().setPlayWhenReady(false);
-                    getPlayer().showSuggestions(true);
+                    restartPlaylist();
                 }
                 break;
             default:
                 Log.e(TAG, "Undetected repeat mode " + repeatMode);
                 break;
+        }
+    }
+
+    private void restartPlaylist() {
+        Video currentVideo = getPlayer().getVideo();
+        VideoGroup group = currentVideo.getGroup(); // Get the VideoGroup (playlist)
+
+        if (group != null && !group.isEmpty()) {
+            // Clear current playlist
+            mPlaylist.clear();
+
+            // Add all videos from VideoGroup
+            mPlaylist.addAll(group.getVideos());
+            
+            Video firstVideo = group.get(0);
+            mPlaylist.setCurrent(firstVideo);
+            openVideoInt(firstVideo);
+        } else {
+            Log.e(TAG, "VideoGroup is null or empty. Can't restart playlist.");
+            getPlayer().setPositionMs(getPlayer().getDurationMs());
+            getPlayer().setPlayWhenReady(false);
+            getPlayer().showSuggestions(true);
         }
     }
 
