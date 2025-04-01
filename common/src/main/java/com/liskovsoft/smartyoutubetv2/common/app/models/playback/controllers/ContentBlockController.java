@@ -20,6 +20,7 @@ import com.liskovsoft.smartyoutubetv2.common.app.presenters.AppDialogPresenter;
 import com.liskovsoft.smartyoutubetv2.common.app.presenters.settings.ContentBlockSettingsPresenter;
 import com.liskovsoft.smartyoutubetv2.common.prefs.ContentBlockData;
 import com.liskovsoft.sharedutils.rx.RxHelper;
+import com.liskovsoft.smartyoutubetv2.common.prefs.PlayerTweaksData;
 import com.liskovsoft.smartyoutubetv2.common.utils.Utils;
 import com.liskovsoft.youtubeapi.service.YouTubeServiceManager;
 import io.reactivex.Observable;
@@ -366,16 +367,24 @@ public class ContentBlockController extends BasePlayerController {
     }
 
     private void applyActions(List<SponsorSegment> foundSegments) {
-        if (foundSegments != null) {
-            SponsorSegment lastSegment = foundSegments.get(foundSegments.size() - 1);
+        if (foundSegments == null) {
+            mLastSkipPosMs = 0;
+            return;
+        }
 
-            Integer resId = mContentBlockData.getLocalizedRes(lastSegment.getCategory());
-            String skipMessage = resId != null ? getContext().getString(resId) : lastSegment.getCategory();
+        SponsorSegment lastSegment = foundSegments.get(foundSegments.size() - 1);
 
-            int type = mContentBlockData.getAction(lastSegment.getCategory());
+        Integer resId = mContentBlockData.getLocalizedRes(lastSegment.getCategory());
+        String skipMessage = resId != null ? getContext().getString(resId) : lastSegment.getCategory();
 
-            long skipPosMs = lastSegment.getEndMs();
+        int type = mContentBlockData.getAction(lastSegment.getCategory());
 
+        long skipPosMs = lastSegment.getEndMs();
+        // Fix infinite skip loop by ignoring short segments. TextureView has a seek bug.
+        long skipDurationMs = Math.min(skipPosMs, getPlayer().getDurationMs()) - getPlayer().getPositionMs();
+        boolean stayQuiet = skipDurationMs < 10_000 && PlayerTweaksData.instance(getContext()).isTextureViewEnabled();
+
+        if (!stayQuiet) {
             if (type == ContentBlockData.ACTION_SKIP_ONLY || getPlayer().isInPIPMode() || Utils.isScreenOff(getContext())) {
                 simpleSkip(skipPosMs);
             } else if (type == ContentBlockData.ACTION_SKIP_WITH_TOAST) {
@@ -385,7 +394,7 @@ public class ContentBlockController extends BasePlayerController {
             }
         }
 
-        mLastSkipPosMs = foundSegments != null ? foundSegments.get(foundSegments.size() - 1).getEndMs() : 0;
+        mLastSkipPosMs = skipPosMs;
     }
 
     private void closeTransparentDialog() {
