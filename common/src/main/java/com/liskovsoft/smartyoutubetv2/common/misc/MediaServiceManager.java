@@ -27,6 +27,7 @@ import com.liskovsoft.smartyoutubetv2.common.prefs.AccountsData;
 import com.liskovsoft.smartyoutubetv2.common.prefs.AppPrefs;
 import com.liskovsoft.smartyoutubetv2.common.prefs.MainUIData;
 import com.liskovsoft.smartyoutubetv2.common.utils.LoadingManager;
+import com.liskovsoft.smartyoutubetv2.common.utils.Utils;
 import com.liskovsoft.youtubeapi.service.YouTubeServiceManager;
 
 import io.reactivex.Observable;
@@ -486,19 +487,22 @@ public class MediaServiceManager implements OnAccountChange {
                 return;
             }
 
-            int type = groups.get(0).getType();
+            MediaGroup firstGroup = groups.get(0);
+            int type = firstGroup.getType();
 
             if (type == MediaGroup.TYPE_CHANNEL_UPLOADS) {
                 if (atomicIndex.incrementAndGet() == 1) {
                     ChannelUploadsPresenter.instance(context).clear();
                 }
-                ChannelUploadsPresenter.instance(context).update(groups.get(0));
+                // NOTE: Crashes RecycleView IndexOutOfBoundsException when doing add immediately after clear
+                Utils.postDelayed(() -> ChannelUploadsPresenter.instance(context).update(firstGroup), 200);
             } else if (type == MediaGroup.TYPE_CHANNEL) {
                 if (atomicIndex.incrementAndGet() == 1) {
                     ChannelPresenter.instance(context).clear();
                     ChannelPresenter.instance(context).setChannel(item);
                 }
-                ChannelPresenter.instance(context).updateRows(groups);
+                // NOTE: Crashes RecycleView IndexOutOfBoundsException when doing add immediately after clear
+                Utils.postDelayed(() -> ChannelPresenter.instance(context).updateRows(groups), 200);
             } else {
                 MessageHelpers.showMessage(context, "Unknown type of channel");
             }
