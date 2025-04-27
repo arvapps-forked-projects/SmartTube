@@ -666,8 +666,6 @@ public class BrowsePresenter extends BasePresenter<BrowseView> implements Sectio
             return;
         }
 
-        //restoreSelectedItems(); // Don't place anywhere else
-
         Disposable updateAction = groups
                 .subscribe(
                         mediaGroups -> {
@@ -719,8 +717,6 @@ public class BrowsePresenter extends BasePresenter<BrowseView> implements Sectio
             getView().showProgressBar(false);
             return;
         }
-
-        //restoreSelectedItems(); // Don't place anywhere else
 
         Disposable updateAction = group
                 .subscribe(
