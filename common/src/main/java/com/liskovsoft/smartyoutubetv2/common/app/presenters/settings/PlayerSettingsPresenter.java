@@ -237,15 +237,11 @@ public class PlayerSettingsPresenter extends BasePresenter<Void> {
     private void appendDeveloperCategory(AppDialogPresenter settingsPresenter) {
         List<OptionItem> options = new ArrayList<>();
 
-        options.add(UiOptionItem.from("Premium users only. Fix for incomplete video format list",
+        options.add(UiOptionItem.from(getContext().getString(R.string.premium_users_only),
                 option -> MediaServiceData.instance().enablePremiumFix(option.isSelected()),
                 MediaServiceData.instance().isPremiumFixEnabled()));
 
-        //options.add(UiOptionItem.from("Unlock more subtitles",
-        //        option -> MediaServiceData.instance().unlockMoreSubtitles(option.isSelected()),
-        //        MediaServiceData.instance().isMoreSubtitlesUnlocked()));
-
-        options.add(UiOptionItem.from("Playback buffering fix",
+        options.add(UiOptionItem.from(getContext().getString(R.string.playback_buffering_fix),
                 option -> {
                     mPlayerTweaksData.enablePersistentAntiBotFix(option.isSelected());
                     mRestartApp = true;
@@ -253,7 +249,7 @@ public class PlayerSettingsPresenter extends BasePresenter<Void> {
                 mPlayerTweaksData.isPersistentAntiBotFixEnabled()));
 
         // Oculus Quest fix: back button not closing the activity
-        options.add(UiOptionItem.from("Oculus Quest fix",
+        options.add(UiOptionItem.from(getContext().getString(R.string.oculus_quest_fix),
                 option -> {
                     mPlayerTweaksData.enableOculusQuestFix(option.isSelected());
                     mRestartApp = true;
