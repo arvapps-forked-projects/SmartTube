@@ -123,7 +123,7 @@ public class VideoLoaderController extends BasePlayerController implements OnDat
     }
 
     private void onLongBuffering(boolean isRecurrent) {
-        if (mLastVideo == null) {
+        if (getPlayer() == null || mLastVideo == null) {
             return;
         }
 
@@ -133,11 +133,11 @@ public class VideoLoaderController extends BasePlayerController implements OnDat
             getMainController().onPlayEnd();
         } else if (isRecurrent) {
             MessageHelpers.showLongMessage(getContext(), R.string.applying_fix);
-            enableFasterDataSource();
+            // Faster source is different among devices. Try them one by one.
+            switchNextEngine();
             restartEngine();
         } else {
             YouTubeServiceManager.instance().applyAntiBotFix(); // bot check error?
-            getPlayerTweaksData().enablePersistentAntiBotFix(true);
             reloadVideo();
         }
     }
@@ -373,11 +373,11 @@ public class VideoLoaderController extends BasePlayerController implements OnDat
             if (formatInfo.isHistoryBroken()) {
                 // Sign in error (bot check error?)
                 YouTubeServiceManager.instance().applyNoPlaybackFix();
-                YouTubeServiceManager.instance().applyAntiBotFix();
-                getPlayerTweaksData().enablePersistentAntiBotFix(true);
+                //YouTubeServiceManager.instance().applyAntiBotFix();
+                scheduleRebootAppTimer(5_000);
+            } else {
+                scheduleNextVideoTimer(5_000);
             }
-
-            scheduleNextVideoTimer(5_000);
         } else if (formatInfo.containsDashVideoFormats() && acceptDashVideoFormats(formatInfo)) {
             Log.d(TAG, "Found regular video in dash format. Loading...");
 
@@ -532,7 +532,6 @@ public class VideoLoaderController extends BasePlayerController implements OnDat
             restartEngine = false;
         } else if (Helpers.startsWithAny(message, "Response code: 429", "Response code: 400")) {
             YouTubeServiceManager.instance().applyAntiBotFix();
-            getPlayerTweaksData().enablePersistentAntiBotFix(true);
             restartEngine = false;
         } else if (type == PlayerEventListener.ERROR_TYPE_SOURCE && rendererIndex == PlayerEventListener.RENDERER_INDEX_UNKNOWN) {
             // NOTE: Fixing too many requests or network issues
@@ -542,7 +541,6 @@ public class VideoLoaderController extends BasePlayerController implements OnDat
             // "Unexpected ArrayIndexOutOfBoundsException", "Unexpected IndexOutOfBoundsException"
             // "Response code: 403" (url deciphered incorrectly)
             YouTubeServiceManager.instance().applyAntiBotFix();
-            getPlayerTweaksData().enablePersistentAntiBotFix(true);
             restartEngine = false;
         } else if (type == PlayerEventListener.ERROR_TYPE_RENDERER && rendererIndex == PlayerEventListener.RENDERER_INDEX_SUBTITLE) {
             // "Response code: 500"
@@ -829,14 +827,6 @@ public class VideoLoaderController extends BasePlayerController implements OnDat
         }
     }
 
-    private int getNextEngine() {
-        int currentEngine = getPlayerTweaksData().getPlayerDataSource();
-        Integer[] engineList = Utils.skipCronet() ?
-                new Integer[] { PlayerTweaksData.PLAYER_DATA_SOURCE_DEFAULT, PlayerTweaksData.PLAYER_DATA_SOURCE_OKHTTP } :
-                new Integer[] { PlayerTweaksData.PLAYER_DATA_SOURCE_CRONET, PlayerTweaksData.PLAYER_DATA_SOURCE_DEFAULT, PlayerTweaksData.PLAYER_DATA_SOURCE_OKHTTP };
-        return Helpers.getNextValue(currentEngine, engineList);
-    }
-
     private void updateBufferingCount() {
         long currentTimeMs = System.currentTimeMillis();
         int bufferingCount = 0;
@@ -857,7 +847,7 @@ public class VideoLoaderController extends BasePlayerController implements OnDat
     }
 
     private boolean isBufferingRecurrent() {
-        return mBufferingCount != null && mBufferingCount.first > 2;
+        return mBufferingCount != null && mBufferingCount.first > 1;
     }
 
     private void forceSectionPlaylistIfNeeded(Video previous, Video next) {
@@ -872,10 +862,25 @@ public class VideoLoaderController extends BasePlayerController implements OnDat
         }
     }
 
+    private void switchNextEngine() {
+        getPlayerTweaksData().setPlayerDataSource(getNextEngine());
+    }
+
+    private int getNextEngine() {
+        int currentEngine = getPlayerTweaksData().getPlayerDataSource();
+        Integer[] engineList = Utils.skipCronet() ?
+                new Integer[] { PlayerTweaksData.PLAYER_DATA_SOURCE_DEFAULT, PlayerTweaksData.PLAYER_DATA_SOURCE_OKHTTP } :
+                new Integer[] { PlayerTweaksData.PLAYER_DATA_SOURCE_CRONET, PlayerTweaksData.PLAYER_DATA_SOURCE_DEFAULT, PlayerTweaksData.PLAYER_DATA_SOURCE_OKHTTP };
+        return Helpers.getNextValue(currentEngine, engineList);
+    }
+
     private static int getFasterDataSource() {
         return Utils.skipCronet() ? PlayerTweaksData.PLAYER_DATA_SOURCE_DEFAULT : PlayerTweaksData.PLAYER_DATA_SOURCE_CRONET;
     }
 
+    /**
+     * Bad idea. Faster source is different among devices
+     */
     private void enableFasterDataSource() {
         if (isFasterDataSourceEnabled()) {
             return;
@@ -884,6 +889,9 @@ public class VideoLoaderController extends BasePlayerController implements OnDat
         getPlayerTweaksData().setPlayerDataSource(getFasterDataSource());
     }
 
+    /**
+     * Bad idea. Faster source is different among devices
+     */
     private boolean isFasterDataSourceEnabled() {
         if (getGeneralData().isProxyEnabled()) {
             // Disable auto switch for proxies.
