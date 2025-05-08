@@ -40,7 +40,9 @@ import java.util.List;
 public class VideoLoaderController extends BasePlayerController implements OnDataChange {
     private static final String TAG = VideoLoaderController.class.getSimpleName();
     private static final long STREAM_END_THRESHOLD_MS = 180_000;
-    private static final long LONG_BUFFERING_THRESHOLD_MS = 20_000;
+    private static final long BUFFERING_THRESHOLD_MS = 5_000;
+    private static final long BUFFERING_WINDOW_MS = 60_000;
+    private static final long BUFFERING_RECURRENCE_COUNT = (long) (BUFFERING_WINDOW_MS * 0.5 / BUFFERING_THRESHOLD_MS);
     private final Playlist mPlaylist;
     private final UniqueRandom mRandom;
     private Video mLastVideo;
@@ -65,10 +67,8 @@ public class VideoLoaderController extends BasePlayerController implements OnDat
         }
     };
     private final Runnable mLoadRandomNext = this::loadRandomNext;
-    private final Runnable mOnLongBuffering = () -> {
-        updateBufferingCount();
-        onLongBuffering(isBufferingRecurrent());
-    };
+    private final Runnable mOnLongBuffering = this::updateBufferingCountIfNeeded;
+
     private final Runnable mRebootApp = () -> {
         if (mLastVideo != null && mLastVideo.hasVideo()) {
             Utils.restartTheApp(getContext(), mLastVideo.videoId);
@@ -119,10 +119,10 @@ public class VideoLoaderController extends BasePlayerController implements OnDat
 
     @Override
     public void onBuffering() {
-        Utils.postDelayed(mOnLongBuffering, LONG_BUFFERING_THRESHOLD_MS);
+        Utils.postDelayed(mOnLongBuffering, BUFFERING_THRESHOLD_MS);
     }
 
-    private void onLongBuffering(boolean isRecurrent) {
+    private void onLongBuffering() {
         if (getPlayer() == null || mLastVideo == null) {
             return;
         }
@@ -131,14 +131,11 @@ public class VideoLoaderController extends BasePlayerController implements OnDat
         if ((!mLastVideo.isLive || mLastVideo.isLiveEnd) &&
                 getPlayer().getDurationMs() - getPlayer().getPositionMs() < STREAM_END_THRESHOLD_MS) {
             getMainController().onPlayEnd();
-        } else if (isRecurrent) {
+        } else {
             MessageHelpers.showLongMessage(getContext(), R.string.applying_fix);
             // Faster source is different among devices. Try them one by one.
             switchNextEngine();
             restartEngine();
-        } else {
-            YouTubeServiceManager.instance().applyAntiBotFix(); // bot check error?
-            reloadVideo();
         }
     }
 
@@ -165,7 +162,6 @@ public class VideoLoaderController extends BasePlayerController implements OnDat
     @Override
     public void onVideoLoaded(Video video) {
         mLastErrorType = -1;
-        Utils.removeCallbacks(mOnLongBuffering);
         getPlayer().setButtonState(R.id.action_repeat, video.finishOnEnded ? PlayerConstants.PLAYBACK_MODE_CLOSE : getPlayerData().getPlaybackMode());
     }
 
@@ -244,7 +240,6 @@ public class VideoLoaderController extends BasePlayerController implements OnDat
         }
 
         Utils.removeCallbacks(mRestartEngine);
-        Utils.removeCallbacks(mOnLongBuffering);
 
         return false;
     }
@@ -323,7 +318,7 @@ public class VideoLoaderController extends BasePlayerController implements OnDat
                                }
 
                                if (Helpers.containsAny(message, "Unexpected token", "Syntax error", "invalid argument") || // temporal fix
-                                       Helpers.equalsAny(className, "PoTokenException")) {
+                                       Helpers.equalsAny(className, "PoTokenException", "BadWebViewException")) {
                                    YouTubeServiceManager.instance().applyNoPlaybackFix();
                                    reloadVideo();
                                } else if (Helpers.containsAny(message, "is not defined")) {
@@ -827,6 +822,17 @@ public class VideoLoaderController extends BasePlayerController implements OnDat
         }
     }
 
+    private void updateBufferingCountIfNeeded() {
+        updateBufferingCount();
+        if (isBufferingRecurrent()) {
+            mBufferingCount = null;
+            onLongBuffering();
+        } else {
+            // Continue counting buffering occurrences...
+            onBuffering();
+        }
+    }
+
     private void updateBufferingCount() {
         long currentTimeMs = System.currentTimeMillis();
         int bufferingCount = 0;
@@ -837,7 +843,7 @@ public class VideoLoaderController extends BasePlayerController implements OnDat
             previousTimeMs = mBufferingCount.second;
         }
 
-        if (currentTimeMs - previousTimeMs < 30_000) {
+        if (currentTimeMs - previousTimeMs < BUFFERING_WINDOW_MS) {
             bufferingCount++;
         } else {
             bufferingCount = 1;
@@ -847,7 +853,7 @@ public class VideoLoaderController extends BasePlayerController implements OnDat
     }
 
     private boolean isBufferingRecurrent() {
-        return mBufferingCount != null && mBufferingCount.first > 1;
+        return mBufferingCount != null && mBufferingCount.first > BUFFERING_RECURRENCE_COUNT;
     }
 
     private void forceSectionPlaylistIfNeeded(Video previous, Video next) {
