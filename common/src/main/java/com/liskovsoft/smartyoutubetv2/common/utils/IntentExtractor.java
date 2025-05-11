@@ -135,8 +135,10 @@ public class IntentExtractor {
             // https://www.youtube.com/@IngaMezerya or https://youtu.be/builditbasement
             String lastPathSegment = url.getLastPathSegment();
 
-            if (Helpers.endsWithAny(url.toString(), lastPathSegment)) { // Exclude this case: https://www.youtube.com/watch?v=LxiZ7BFWQSQ
-                channelId = Helpers.startsWith(lastPathSegment, "@") ? lastPathSegment : "@" + lastPathSegment;
+            // NOTE: can't distinguish a share video link (https://youtu.be/LpNVf8sczqU) from a non-prefix channel link (https://youtu.be/builditbasement)
+
+            if (Helpers.startsWith(lastPathSegment, "@")) {
+                channelId = lastPathSegment;
             }
         }
 
