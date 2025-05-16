@@ -1,6 +1,7 @@
 package com.liskovsoft.smartyoutubetv2.tv.ui.widgets.complexcardview;
 
 import android.content.Context;
+import android.graphics.Color;
 import android.util.AttributeSet;
 import android.view.View;
 import android.view.ViewGroup;
@@ -32,6 +33,8 @@ public class ComplexImageView extends RelativeLayout {
     private int mPreviewHeight;
     private Runnable mCreateAndStartPlayer;
     private WeakReference<Video> mVideo;
+    private boolean mPreferSimplePreview;
+    private boolean mMute;
 
     public ComplexImageView(Context context) {
         super(context);
@@ -122,12 +125,16 @@ public class ComplexImageView extends RelativeLayout {
         }
     }
 
+    public void setMute(boolean mute) {
+        mMute = mute;
+    }
+
     public void startPlayback() {
         if (getVideo() == null) {
             return;
         }
 
-        if (getVideo().previewUrl != null) {
+        if (getVideo().previewUrl != null && mPreferSimplePreview) {
             if (mPreviewImage == null) {
                 mPreviewImage = new ImageView(getContext());
                 mPreviewImage.setScaleType(ScaleType.CENTER_CROP);
@@ -158,12 +165,13 @@ public class ComplexImageView extends RelativeLayout {
             mPreviewPlayer = new EmbedPlayerView(getContext());
             mPreviewPlayer.setQuality(Math.min(mPreviewWidth, mPreviewHeight) < 300 ? EmbedPlayerView.QUALITY_LOW : EmbedPlayerView.QUALITY_NORMAL);
             mPreviewPlayer.setUseController(false);
-            //mPreviewPlayer.setMute(true);
+            mPreviewPlayer.setMute(mMute);
+            mPreviewPlayer.setBackgroundColor(Color.BLACK);
             mPreviewContainer.addView(mPreviewPlayer, new FrameLayout.LayoutParams(mPreviewWidth, mPreviewHeight));
             mPreviewContainer.setVisibility(View.VISIBLE);
         }
 
-        mPreviewPlayer.openVideo(getVideo().copy());
+        mPreviewPlayer.openVideo(getVideo());
     }
 
     public void stopPlayback() {
@@ -171,12 +179,14 @@ public class ComplexImageView extends RelativeLayout {
             return;
         }
 
-        if (getVideo().previewUrl != null) {
-            mPreviewContainer.removeView(mPreviewImage);
-            mPreviewContainer.setVisibility(View.GONE);
-            mPreviewImage.setImageDrawable(null);
-            Glide.with(getContext().getApplicationContext()).clear(mPreviewImage);
-            mPreviewImage = null;
+        if (getVideo().previewUrl != null && mPreferSimplePreview) {
+            if (mPreviewImage != null) {
+                mPreviewContainer.removeView(mPreviewImage);
+                mPreviewContainer.setVisibility(View.GONE);
+                mPreviewImage.setImageDrawable(null);
+                Glide.with(getContext().getApplicationContext()).clear(mPreviewImage);
+                mPreviewImage = null;
+            }
         } else if (getVideo().videoId != null) {
             Utils.removeCallbacks(mCreateAndStartPlayer);
 

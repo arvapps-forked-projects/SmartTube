@@ -44,7 +44,7 @@ public class VideoStateController extends BasePlayerController {
     public void onNewVideo(Video item) {
         // Ensure that we aren't running on presenter init stage
         if (getPlayer() != null) {
-            if (!item.equals(getVideo())) { // video might be opened twice (when remote connection enabled). Fix for that.
+            if (!item.equals(getVideo()) || isEmbed()) { // video might be opened twice (when remote connection enabled). Fix for that.
                 // Reset auto-save history timer
                 mTickleLeft = 0;
                 // Save state of the previous video.
@@ -385,7 +385,8 @@ public class VideoStateController extends BasePlayerController {
     }
 
     public void saveState() {
-        if (getVideo() != null && getVideo().embedPlayer) {
+        // Skip mini player, but don't save for the previews (mute enabled)
+        if (isMutedEmbed() || isBeginEmbed()) {
             return;
         }
 
@@ -405,7 +406,8 @@ public class VideoStateController extends BasePlayerController {
     }
 
     private void persistState() {
-        if (getVideo() != null && getVideo().embedPlayer) {
+        // Skip mini player, but don't save for the previews (mute enabled)
+        if (isMutedEmbed() || isBeginEmbed()) {
             return;
         }
 
@@ -651,5 +653,17 @@ public class VideoStateController extends BasePlayerController {
                 getStateService().removeByVideoId(video.videoId);
             }
         }
+    }
+
+    private boolean isMutedEmbed() {
+        return isEmbed() && getPlayer() != null && Helpers.floatEquals(getPlayer().getVolume(), 0);
+    }
+
+    private boolean isBeginEmbed() {
+        return isEmbed() && getPlayer() != null && getPlayer().getPositionMs() <= BEGIN_THRESHOLD_MS;
+    }
+
+    private boolean isEmbed() {
+        return getVideo() != null && getVideo().embedPlayer;
     }
 }
