@@ -147,6 +147,24 @@ public abstract class MultipleRowsFragment extends RowsSupportFragment implement
         }
     }
 
+    private int findPositionById(int id) {
+        if (mRowsAdapter != null) {
+            VideoGroupObjectAdapter needed = mVideoGroupAdapters.get(id);
+            for (int i = 0; i < mRowsAdapter.size(); i++) {
+                Object row = mRowsAdapter.get(i);
+
+                if (row instanceof ListRow) {
+                    VideoGroupObjectAdapter adapter = (VideoGroupObjectAdapter) ((ListRow) row).getAdapter();
+                    if (adapter == needed) {
+                        return i;
+                    }
+                }
+            }
+        }
+
+        return -1;
+    }
+
     @Override
     public boolean isEmpty() {
         if (mRowsAdapter == null) {
@@ -158,6 +176,14 @@ public abstract class MultipleRowsFragment extends RowsSupportFragment implement
 
     @Override
     public void update(VideoGroup group) {
+        freeze(true);
+
+        updateInt(group);
+
+        freeze(false);
+    }
+
+    private void updateInt(VideoGroup group) {
         if (mVideoGroupAdapters == null) {
             mPendingUpdates.add(group);
             return;
@@ -214,11 +240,7 @@ public abstract class MultipleRowsFragment extends RowsSupportFragment implement
         } else {
             Log.d(TAG, "Continue row %s %s", group.getTitle(), System.currentTimeMillis());
 
-            freeze(true);
-
             existingAdapter.add(group); // continue
-
-            freeze(false);
         }
 
         restorePosition();

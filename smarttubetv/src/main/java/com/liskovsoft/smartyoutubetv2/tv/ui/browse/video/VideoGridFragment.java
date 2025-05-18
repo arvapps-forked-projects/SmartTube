@@ -15,7 +15,6 @@ import com.liskovsoft.smartyoutubetv2.common.app.presenters.interfaces.VideoGrou
 import com.liskovsoft.smartyoutubetv2.common.misc.TickleManager;
 import com.liskovsoft.smartyoutubetv2.common.prefs.MainUIData;
 import com.liskovsoft.smartyoutubetv2.common.utils.LoadingManager;
-import com.liskovsoft.smartyoutubetv2.common.utils.Utils;
 import com.liskovsoft.smartyoutubetv2.tv.R;
 import com.liskovsoft.smartyoutubetv2.tv.adapter.VideoGroupObjectAdapter;
 import com.liskovsoft.smartyoutubetv2.tv.presenter.CustomVerticalGridPresenter;
@@ -43,7 +42,6 @@ public class VideoGridFragment extends GridFragment implements VideoSection {
     private Video mSelectedItem;
     private float mVideoGridScale;
     private final Runnable mRestoreTask = this::restorePosition;
-    private Runnable mUpdateGrid;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -138,18 +136,16 @@ public class VideoGridFragment extends GridFragment implements VideoSection {
 
     @Override
     public void update(VideoGroup group) {
+        freeze(true);
+
+        updateInt(group);
+
+        freeze(false);
+    }
+
+    private void updateInt(VideoGroup group) {
         if (mGridAdapter == null) {
             mPendingUpdates.add(group);
-            return;
-        }
-
-        Utils.removeCallbacks(mUpdateGrid);
-        mUpdateGrid = null;
-
-        // Attempt to fix: IllegalStateException: Cannot call this method while RecyclerView is computing a layout or scrolling
-        if (getBrowseGrid() != null && getBrowseGrid().isComputingLayout()) {
-            mUpdateGrid = () -> update(group);
-            Utils.postDelayed(mUpdateGrid, 100);
             return;
         }
 
@@ -172,11 +168,7 @@ public class VideoGridFragment extends GridFragment implements VideoSection {
             return;
         }
 
-        freeze(true);
-
         mGridAdapter.add(group);
-
-        freeze(false);
 
         restorePosition();
     }
