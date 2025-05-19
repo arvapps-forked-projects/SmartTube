@@ -52,10 +52,8 @@ public class VideoStateController extends BasePlayerController {
                 // In case video opened from phone and other stuff.
                 removeFromHistoryIfNeeded();
                 saveState();
-            } else if (isEmbed()) { // switching from embed to normal player
-                // Save state of the previous video.
-                // In case video opened from phone and other stuff.
-                saveState();
+            } else if (isEmbedPlayer()) { // switching from embed to normal player
+                savePosition();
             }
         }
 
@@ -510,6 +508,10 @@ public class VideoStateController extends BasePlayerController {
     }
 
     private void restoreSpeedAndPositionIfNeeded() {
+        if (getPlayer() == null) {
+            return;
+        }
+
         Video item = getVideo();
 
         boolean liveEnd = isLiveEnd();
@@ -665,14 +667,10 @@ public class VideoStateController extends BasePlayerController {
     }
 
     private boolean isMutedEmbed() {
-        return isEmbed() && getPlayer() != null && Helpers.floatEquals(getPlayer().getVolume(), 0);
+        return isEmbedPlayer() && getPlayer() != null && Helpers.floatEquals(getPlayer().getVolume(), 0);
     }
 
     private boolean isBeginEmbed() {
-        return isEmbed() && System.currentTimeMillis() - mNewVideoTimeMs <= EMBED_THRESHOLD_MS;
-    }
-
-    private boolean isEmbed() {
-        return getVideo() != null && getVideo().embedPlayer;
+        return isEmbedPlayer() && System.currentTimeMillis() - mNewVideoTimeMs <= EMBED_THRESHOLD_MS;
     }
 }
