@@ -76,6 +76,10 @@ public class RemoteController extends BasePlayerController implements OnDataChan
 
     @Override
     public void onVideoLoaded(Video item) {
+        if (getPlayer() == null) {
+            return;
+        }
+
         if (mNewVideoPositionMs > 0) {
             getPlayer().setPositionMs(mNewVideoPositionMs);
             mNewVideoPositionMs = 0;
@@ -125,7 +129,7 @@ public class RemoteController extends BasePlayerController implements OnDataChan
     }
 
     private void postStartPlaying(@Nullable Video item, boolean isPlaying) {
-        if (!mRemoteControlData.isDeviceLinkEnabled() || !isConnectedBefore()) {
+        if (isRemoteDisabled()) {
             return;
         }
 
@@ -143,7 +147,7 @@ public class RemoteController extends BasePlayerController implements OnDataChan
     }
 
     private void postStartPlaying(String videoId, long positionMs, long durationMs, boolean isPlaying) {
-        if (!mRemoteControlData.isDeviceLinkEnabled() || !isConnectedBefore()) {
+        if (isRemoteDisabled()) {
             return;
         }
 
@@ -155,7 +159,7 @@ public class RemoteController extends BasePlayerController implements OnDataChan
     }
 
     private void postState(long positionMs, long durationMs, boolean isPlaying) {
-        if (!mRemoteControlData.isDeviceLinkEnabled() || !isConnectedBefore()) {
+        if (isRemoteDisabled()) {
             return;
         }
 
@@ -167,7 +171,7 @@ public class RemoteController extends BasePlayerController implements OnDataChan
     }
 
     private void postVolumeChange(int volume) {
-        if (!mRemoteControlData.isDeviceLinkEnabled() || !isConnectedBefore()) {
+        if (isRemoteDisabled()) {
             return;
         }
 
@@ -533,5 +537,9 @@ public class RemoteController extends BasePlayerController implements OnDataChan
 
     private boolean isConnectedBefore() {
         return mConnected || mRemoteControlData.isConnectedBefore();
+    }
+
+    private boolean isRemoteDisabled() {
+        return !mRemoteControlData.isDeviceLinkEnabled() || !isConnectedBefore() || isEmbedPlayer();
     }
 }

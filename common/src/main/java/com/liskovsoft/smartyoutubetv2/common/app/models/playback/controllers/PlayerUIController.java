@@ -262,12 +262,20 @@ public class PlayerUIController extends BasePlayerController {
 
     @Override
     public void onVideoLoaded(Video item) {
+        if (getPlayer() == null) {
+            return;
+        }
+
         getPlayer().updateEndingTime();
         applySoundOffButtonState();
     }
 
     @Override
     public void onSeekEnd() {
+        if (getPlayer() == null) {
+            return;
+        }
+
         getPlayer().updateEndingTime();
     }
 
