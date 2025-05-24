@@ -401,15 +401,16 @@ public class VideoStateController extends BasePlayerController {
 
     public void saveState() {
         // Skip mini player, but don't save for the previews (mute enabled)
-        if (isMutedEmbed() || isBeginEmbed()) {
+        if (isMutedEmbed()) {
             return;
         }
 
-        //Log.d(TAG, "Saving state of %s %s", getVideo().title, getPlayer().getPositionMs());
-
         savePosition();
-        updateHistory();
-        syncWithPlaylists();
+
+        if (!isBeginEmbed()) {
+            updateHistory();
+            syncWithPlaylists();
+        }
     }
 
     private void restoreState() {
@@ -435,7 +436,7 @@ public class VideoStateController extends BasePlayerController {
         getStateService().persistState();
     }
 
-    public void savePosition() {
+    private void savePosition() {
         Video video = getVideo();
 
         if (video == null || getPlayer() == null || !getPlayer().containsMedia()) {
@@ -486,7 +487,7 @@ public class VideoStateController extends BasePlayerController {
 
         // Do I need to check that item isn't live? (state != null && !item.isLive)
         if (state != null) {
-            setPositionMs(state.positionMs);
+            getPlayer().setPositionMs(state.positionMs);
         }
 
         if (!mIsPlayBlocked) {
@@ -608,12 +609,12 @@ public class VideoStateController extends BasePlayerController {
         return item.belongsToMusic();
     }
 
-    private void setPositionMs(long positionMs) {
-        boolean samePositions = Math.abs(positionMs - getPlayer().getPositionMs()) < BEGIN_THRESHOLD_MS;
-        if (!samePositions) {
-            getPlayer().setPositionMs(positionMs);
-        }
-    }
+    //private void setPositionMs(long positionMs) {
+    //    boolean samePositions = Math.abs(positionMs - getPlayer().getPositionMs()) < BEGIN_THRESHOLD_MS;
+    //    if (!samePositions) {
+    //        getPlayer().setPositionMs(positionMs);
+    //    }
+    //}
 
     private boolean isStateOutdated(State state, Video item) {
         if (state == null) {
