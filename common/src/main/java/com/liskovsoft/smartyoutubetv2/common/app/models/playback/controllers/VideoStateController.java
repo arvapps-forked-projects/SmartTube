@@ -150,8 +150,9 @@ public class VideoStateController extends BasePlayerController {
 
     @Override
     public void onMetadata(MediaItemMetadata metadata) {
-        saveState(); // start watching?
-        persistState(); // restore on crash???
+        // NOTE: needed for the restore after oom crash?
+        //saveState(); // start watching?
+        //persistState(); // restore on crash???
 
         // Channel info should be loaded at this point
         restoreSubtitleFormat();
@@ -407,7 +408,7 @@ public class VideoStateController extends BasePlayerController {
 
         savePosition();
 
-        if (!isBeginEmbed()) {
+        if (!isBegin()) {
             updateHistory();
             syncWithPlaylists();
         }
@@ -429,7 +430,7 @@ public class VideoStateController extends BasePlayerController {
 
     private void persistState() {
         // Skip mini player, but don't save for the previews (mute enabled)
-        if (isMutedEmbed() || isBeginEmbed()) {
+        if (isMutedEmbed() || isBegin()) {
             return;
         }
 
@@ -680,5 +681,9 @@ public class VideoStateController extends BasePlayerController {
 
     private boolean isBeginEmbed() {
         return isEmbedPlayer() && System.currentTimeMillis() - mNewVideoTimeMs <= EMBED_THRESHOLD_MS;
+    }
+
+    private boolean isBegin() {
+        return System.currentTimeMillis() - mNewVideoTimeMs <= EMBED_THRESHOLD_MS;
     }
 }

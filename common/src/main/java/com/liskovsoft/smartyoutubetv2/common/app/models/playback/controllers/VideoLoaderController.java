@@ -44,7 +44,6 @@ public class VideoLoaderController extends BasePlayerController implements OnDat
     private static final long BUFFERING_WINDOW_MS = 60_000;
     private static final long BUFFERING_RECURRENCE_COUNT = (long) (BUFFERING_WINDOW_MS * 0.5 / BUFFERING_THRESHOLD_MS);
     private final Playlist mPlaylist;
-    private final UniqueRandom mRandom;
     private Video mPendingVideo;
     private int mLastErrorType = -1;
     private SuggestionsController mSuggestionsController;
@@ -71,7 +70,7 @@ public class VideoLoaderController extends BasePlayerController implements OnDat
 
     private final Runnable mRebootApp = () -> {
         Video video = getVideo();
-        if (video != null && video.hasVideo()) {
+        if (getPlayer() != null && video != null && video.hasVideo()) {
             Utils.restartTheApp(getContext(), video.videoId);
         }
     };
@@ -84,7 +83,6 @@ public class VideoLoaderController extends BasePlayerController implements OnDat
 
     public VideoLoaderController() {
         mPlaylist = Playlist.instance();
-        mRandom = new UniqueRandom();
     }
 
     @Override
@@ -174,6 +172,7 @@ public class VideoLoaderController extends BasePlayerController implements OnDat
 
         mLastErrorType = -1;
         getPlayer().setButtonState(R.id.action_repeat, video.finishOnEnded ? PlayerConstants.PLAYBACK_MODE_CLOSE : getPlayerData().getPlaybackMode());
+        checkSleepTimer();
     }
 
     @Override
@@ -261,11 +260,6 @@ public class VideoLoaderController extends BasePlayerController implements OnDat
         Utils.removeCallbacks(mRestartEngine);
 
         return false;
-    }
-
-    @Override
-    public void onTickle() {
-        checkSleepTimer();
     }
 
     private void checkSleepTimer() {
@@ -533,17 +527,8 @@ public class VideoLoaderController extends BasePlayerController implements OnDat
             restartEngine = false;
             resultMsg = shortErrorMsg;
         } else if (error instanceof OutOfMemoryError) {
-            //if (getPlayerData().getVideoBufferType() == PlayerData.BUFFER_LOWEST) {
-            //    getPlayerTweaksData().enableSectionPlaylist(false);
-            //} else if (getPlayerData().getVideoBufferType() == PlayerData.BUFFER_LOW) {
-            //    getPlayerData().setVideoBufferType(PlayerData.BUFFER_LOWEST);
-            //} else {
-            //    getPlayerData().setVideoBufferType(PlayerData.BUFFER_LOW);
-            //}
-
             if (getPlayerData().getVideoBufferType() == PlayerData.BUFFER_MEDIUM || getPlayerData().getVideoBufferType() == PlayerData.BUFFER_LOW) {
                 getPlayerTweaksData().enableSectionPlaylist(false);
-                //getPlayerTweaksData().enableHighBitrateFormats(false);
                 restartEngine = false;
             } else {
                 getPlayerData().setVideoBufferType(PlayerData.BUFFER_MEDIUM);
@@ -685,7 +670,7 @@ public class VideoLoaderController extends BasePlayerController implements OnDat
         }
 
         // Stop the playback if the user is browsing options or reading comments
-        if (getAppDialogPresenter().isDialogShown() && !getAppDialogPresenter().isOverlay()) {
+        if (getAppDialogPresenter().isDialogShown() && !getAppDialogPresenter().isOverlay() && playbackMode != PlayerConstants.PLAYBACK_MODE_ONE) {
             getAppDialogPresenter().setOnFinish(mOnApplyPlaybackMode);
             return;
         }
@@ -841,7 +826,10 @@ public class VideoLoaderController extends BasePlayerController implements OnDat
             Video video = new Video();
             video.playlistId = getVideo().playlistId;
             VideoGroup topRow = getPlayer().getSuggestionsByIndex(0);
-            video.playlistIndex = mRandom.getPlaylistIndex(getVideo().getPlaylistId(),
+            //video.playlistIndex = mRandom.getPlaylistIndex(getVideo().getPlaylistId(),
+            //        getVideo().playlistInfo.getSize() != -1 ? getVideo().playlistInfo.getSize() : topRow != null ? topRow.getVideos().size() : -1);
+
+            video.playlistIndex = UniqueRandom.getRandomIndex(getVideo().getPositionInsideGroup(),
                     getVideo().playlistInfo.getSize() != -1 ? getVideo().playlistInfo.getSize() : topRow != null ? topRow.getVideos().size() : -1);
 
             MediaServiceManager.instance().loadMetadata(video, randomMetadata -> {
