@@ -2234,9 +2234,10 @@ final class GridLayoutManager extends RecyclerView.LayoutManager {
                     // append items for mExtraLayoutSpaceInPreLayout
                     appendVisibleItems();
                     prependVisibleItems();
-                } catch (IndexOutOfBoundsException | NullPointerException e) {
+                } catch (IndexOutOfBoundsException | NullPointerException | IllegalArgumentException e) {
                     // IndexOutOfBoundsException: Invalid item position -1(-1). Item count:12 androidx.leanback.widget.VerticalGridView
                     // NullPointerException: Attempt to invoke virtual method 'android.view.ViewGroup$LayoutParams android.view.View.getLayoutParams()'
+                    // IllegalArgumentException: VideoCardPresenter$1 is not a direct child of HorizontalGridView
                     e.printStackTrace();
                 }
             }
@@ -2320,9 +2321,10 @@ final class GridLayoutManager extends RecyclerView.LayoutManager {
             try {
                 appendVisibleItems();
                 prependVisibleItems();
-            } catch (IndexOutOfBoundsException | NullPointerException e) {
+            } catch (IndexOutOfBoundsException | NullPointerException | IllegalArgumentException e) {
                 // IndexOutOfBoundsException: Invalid item position -1(-1). Item count:12 androidx.leanback.widget.VerticalGridView
                 // NullPointerException: Attempt to invoke virtual method 'android.view.ViewGroup$LayoutParams android.view.View.getLayoutParams()'
+                // IllegalArgumentException: VideoCardPresenter$1 is not a direct child of HorizontalGridView
                 e.printStackTrace();
             }
             // b/67370222: do not removeInvisibleViewsAtFront/End() in the loop, otherwise
@@ -2427,8 +2429,9 @@ final class GridLayoutManager extends RecyclerView.LayoutManager {
             // MOD: fix RecycleView crash on Ugoos
             try {
                 result = scrollDirectionPrimary(dx);
-            } catch (NullPointerException e) {
+            } catch (NullPointerException | IllegalArgumentException e) {
                 // Attempt to invoke virtual method 'android.view.ViewGroup$LayoutParams android.view.View.getLayoutParams()' on a null object reference
+                // IllegalArgumentException: VideoCardPresenter$1 is not a direct child of androidx.leanback.widget.HorizontalGridView
                 e.printStackTrace();
                 result = 0;
             }
@@ -2453,8 +2456,9 @@ final class GridLayoutManager extends RecyclerView.LayoutManager {
             // MOD: fix RecycleView crash on Eltex (Android 9)
             try {
                 result = scrollDirectionPrimary(dy);
-            } catch (NullPointerException e) {
+            } catch (NullPointerException | IllegalArgumentException e) {
                 // Attempt to invoke virtual method 'android.view.ViewGroup$LayoutParams android.view.View.getLayoutParams()' on a null object reference
+                // IllegalArgumentException: VideoCardPresenter$1 is not a direct child of androidx.leanback.widget.HorizontalGridView
                 e.printStackTrace();
                 result = 0;
             }

@@ -172,7 +172,6 @@ public class VideoLoaderController extends BasePlayerController implements OnDat
 
         mLastErrorType = -1;
         getPlayer().setButtonState(R.id.action_repeat, video.finishOnEnded ? PlayerConstants.PLAYBACK_MODE_CLOSE : getPlayerData().getPlaybackMode());
-        checkSleepTimer();
     }
 
     @Override
@@ -478,7 +477,7 @@ public class VideoLoaderController extends BasePlayerController implements OnDat
 
         String message = error.getMessage();
         String className = error.getClass().getSimpleName();
-        String fullMsg = String.format("loadFormatInfo error: %s: %s", className, message);
+        String fullMsg = String.format("loadFormatInfo error: %s: %s", className, Utils.getStackTraceAsString(error));
         Log.e(TAG, fullMsg);
 
         if (!Helpers.containsAny(message, "fromNullable result is null")) {
@@ -781,10 +780,6 @@ public class VideoLoaderController extends BasePlayerController implements OnDat
             return false;
         }
 
-        //if (getPlayerData().isLegacyCodecsForced()) {
-        //    return false;
-        //}
-
         return true;
     }
 
@@ -793,20 +788,23 @@ public class VideoLoaderController extends BasePlayerController implements OnDat
             return false;
         }
 
-        //if (getPlayerData().isLegacyCodecsForced()) {
-        //    return false;
-        //}
-
         return true;
     }
 
     @Override
     public void onMetadata(MediaItemMetadata metadata) {
         loadRandomNext();
+        // The title already synced witch metadata at this point
+        checkSleepTimer();
     }
 
     @Override
     public void onPlay() {
+        Utils.removeCallbacks(mOnLongBuffering);
+    }
+
+    @Override
+    public void onPause() {
         Utils.removeCallbacks(mOnLongBuffering);
     }
 

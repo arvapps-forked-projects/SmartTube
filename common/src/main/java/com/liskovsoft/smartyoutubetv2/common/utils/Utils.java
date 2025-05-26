@@ -1058,4 +1058,19 @@ public class Utils {
     public static boolean isEnoughRam(Context context) {
         return VERSION.SDK_INT > 21 && Helpers.getDeviceRam(context) > 1_500_000_000; // 1.5 GB
     }
+
+    public static String getStackTraceAsString(Throwable throwable) {
+        StringBuilder result = new StringBuilder();
+        result.append(throwable.getMessage()).append("\n");
+        StackTraceElement[] elements = throwable.getStackTrace();
+        if (elements.length > 0) {
+            StackTraceElement topElement = elements[0];
+            result.append(topElement.getMethodName());
+            result.append("(").append(topElement.getFileName()).append(":").append(topElement.getLineNumber()).append(")");
+        } else {
+            result.append("No stack trace available");
+        }
+
+        return result.toString();
+    }
 }
