@@ -49,6 +49,7 @@ public class PlaybackPresenter extends BasePresenter<PlaybackView> implements Pl
     private Video mPendingVideo;
     // Fix for using destroyed view
     private WeakReference<PlaybackView> mPlayer = new WeakReference<>(null);
+    private long mNewVideoStartedTimeMs;
 
     private PlaybackPresenter(Context context) {
         super(context);
@@ -206,8 +207,9 @@ public class PlaybackPresenter extends BasePresenter<PlaybackView> implements Pl
         super.setView(view);
         mPlayer = new WeakReference<>(view);
 
-        if (view != null && view.getVideo() != null) {
-            // Just in case switching between embed and fullscreen players
+        // Fix playing the previous video when switching between embed and fullscreen players.
+        // E.g. when the user pressed back on the Channel content screen
+        if (view != null && view.getVideo() != null && isNewVideoExpired()) {
             mVideo = new WeakReference<>(view.getVideo());
         }
     }
@@ -237,6 +239,7 @@ public class PlaybackPresenter extends BasePresenter<PlaybackView> implements Pl
     public void onNewVideo(Video video) {
         process(listener -> listener.onNewVideo(video));
         mVideo = new WeakReference<>(video);
+        mNewVideoStartedTimeMs = System.currentTimeMillis();
     }
 
     @Override
@@ -264,6 +267,10 @@ public class PlaybackPresenter extends BasePresenter<PlaybackView> implements Pl
 
     private void process(Processor<PlayerEventListener> processor) {
         Utils.process(mEventListeners, processor);
+    }
+
+    private boolean isNewVideoExpired() {
+        return System.currentTimeMillis() - mNewVideoStartedTimeMs > 3_000;
     }
 
     // End Helpers
