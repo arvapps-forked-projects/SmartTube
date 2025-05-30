@@ -408,7 +408,7 @@ public class VideoStateController extends BasePlayerController {
 
         savePosition();
 
-        if (!isBegin()) {
+        if (!isBeginEmbed()) {
             updateHistory();
             syncWithPlaylists();
         }
@@ -430,7 +430,7 @@ public class VideoStateController extends BasePlayerController {
 
     private void persistState() {
         // Skip mini player, but don't save for the previews (mute enabled)
-        if (isMutedEmbed() || isBegin()) {
+        if (isMutedEmbed() || isBeginEmbed()) {
             return;
         }
 
@@ -452,7 +452,8 @@ public class VideoStateController extends BasePlayerController {
         long positionMs = getPlayer().getPositionMs();
         long remainsMs = durationMs - positionMs;
         boolean isPositionActual = remainsMs > 1_000;
-        if (isPositionActual) { // partially viewed
+        boolean isLiveBroken = video.isLive && durationMs <= 30_000; // the live without a history
+        if (isPositionActual && !isLiveBroken) { // partially viewed
             State state = new State(video, positionMs, durationMs, getPlayer().getSpeed());
             getStateService().save(state);
             // Sync video. You could safely use it later to restore state.
@@ -594,14 +595,16 @@ public class VideoStateController extends BasePlayerController {
     }
 
     private void showHideScreensaver(boolean show) {
-        if (getActivity() instanceof MotherActivity) {
-            ScreensaverManager screensaverManager = ((MotherActivity) getActivity()).getScreensaverManager();
+        ScreensaverManager screensaverManager = getScreensaverManager();
 
-            if (show) {
-                screensaverManager.enableChecked();
-            } else {
-                screensaverManager.disableChecked();
-            }
+        if (screensaverManager == null) {
+            return;
+        }
+
+        if (show) {
+            screensaverManager.enableChecked();
+        } else {
+            screensaverManager.disableChecked();
         }
     }
 
@@ -680,11 +683,7 @@ public class VideoStateController extends BasePlayerController {
     }
 
     private boolean isBeginEmbed() {
-        return isEmbedPlayer() && System.currentTimeMillis() - mNewVideoTimeMs <= EMBED_THRESHOLD_MS;
-    }
-
-    private boolean isBegin() {
-        return System.currentTimeMillis() - mNewVideoTimeMs <= EMBED_THRESHOLD_MS &&
+        return isEmbedPlayer() && System.currentTimeMillis() - mNewVideoTimeMs <= EMBED_THRESHOLD_MS &&
                 getPlayer() != null && getPlayer().getPositionMs() < getPlayer().getDurationMs();
     }
 }
