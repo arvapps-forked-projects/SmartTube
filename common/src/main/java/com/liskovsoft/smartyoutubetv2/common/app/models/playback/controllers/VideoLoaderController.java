@@ -128,7 +128,7 @@ public class VideoLoaderController extends BasePlayerController {
         if ((!getVideo().isLive || getVideo().isLiveEnd) &&
                 getPlayer().getDurationMs() - getPlayer().getPositionMs() < STREAM_END_THRESHOLD_MS) {
             getMainController().onPlayEnd();
-        } else {
+        } else if (!getPlayerTweaksData().isNetworkErrorFixingDisabled()) {
             MessageHelpers.showLongMessage(getContext(), R.string.applying_fix);
             // Faster source is different among devices. Try them one by one.
             switchNextEngine();
@@ -917,11 +917,11 @@ public class VideoLoaderController extends BasePlayerController {
      * Bad idea. Faster source is different among devices
      */
     private boolean isFasterDataSourceEnabled() {
-        if (getGeneralData().isProxyEnabled()) {
-            // Disable auto switch for proxies.
-            // Current source may have better compatibility with proxies than fastest one.
-            return true;
-        }
+        //if (getGeneralData().isProxyEnabled()) {
+        //    // Disable auto switch for proxies.
+        //    // Current source may have better compatibility with proxies than fastest one.
+        //    return true;
+        //}
 
         int fasterDataSource = getFasterDataSource();
         return getPlayerTweaksData().getPlayerDataSource() == fasterDataSource;
