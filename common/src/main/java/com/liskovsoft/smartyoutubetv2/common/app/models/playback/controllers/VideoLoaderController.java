@@ -191,12 +191,6 @@ public class VideoLoaderController extends BasePlayerController {
         return true;
     }
 
-    @Override
-    public void onFinish() {
-        // ???
-        //mPlaylist.clearPosition();
-    }
-
     public void loadPrevious() {
         openVideoInt(mSuggestionsController.getPrevious());
 
@@ -210,6 +204,7 @@ public class VideoLoaderController extends BasePlayerController {
         //getVideo() = null; // in case next video is the same as previous
 
         if (next != null) {
+            next.isShuffled = getVideo().isShuffled;
             forceSectionPlaylistIfNeeded(getVideo(), next);
             openVideoInt(next);
         } else {
@@ -818,26 +813,14 @@ public class VideoLoaderController extends BasePlayerController {
     }
 
     private void loadRandomNext() {
-        MediaServiceManager.instance().disposeActions();
-
-        if (getPlayer() == null || getPlayerData() == null || getVideo() == null || getVideo().playlistInfo == null) {
+        if (getPlayer() == null || getPlayerData() == null || getVideo() == null || getVideo().isShuffled ||
+                getVideo().shuffleMediaItem == null || getPlayerData().getPlaybackMode() != PlayerConstants.PLAYBACK_MODE_SHUFFLE) {
             return;
         }
 
-        if (getPlayerData().getPlaybackMode() == PlayerConstants.PLAYBACK_MODE_SHUFFLE) {
-            Video video = new Video();
-            video.playlistId = getVideo().playlistId;
-            video.playlistIndex = UniqueRandom.getRandomIndex(getVideo().playlistInfo.getCurrentIndex(), getVideo().playlistInfo.getSize());
-
-            MediaServiceManager.instance().loadMetadata(video, randomMetadata -> {
-                if (randomMetadata.getNextVideo() == null) {
-                    return;
-                }
-
-                getVideo().nextMediaItem = SimpleMediaItem.from(randomMetadata);
-                getPlayer().setNextTitle(Video.from(getVideo().nextMediaItem));
-            });
-        }
+        getVideo().isShuffled = true;
+        getVideo().playlistParams = getVideo().shuffleMediaItem.getParams();
+        getController(SuggestionsController.class).loadSuggestions(getVideo());
     }
 
     private void updateBufferingCountIfNeeded() {

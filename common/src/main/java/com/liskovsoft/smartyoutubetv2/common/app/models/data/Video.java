@@ -65,6 +65,7 @@ public final class Video {
     public int startTimeSeconds;
     public MediaItem mediaItem;
     public MediaItem nextMediaItem;
+    public MediaItem shuffleMediaItem;
     public PlaylistInfo playlistInfo;
     public boolean hasNewContent;
     public boolean isLive;
@@ -93,6 +94,7 @@ public final class Video {
     public boolean deArrowProcessed;
     public boolean isLiveEnd;
     public boolean forceSectionPlaylist;
+    public boolean isShuffled;
     private int startSegmentNum;
     private long liveDurationMs = -1;
     private long durationMs = -1;
@@ -715,6 +717,7 @@ public final class Video {
         }
         channelId = metadata.getChannelId();
         nextMediaItem = findNextVideo(metadata);
+        shuffleMediaItem = metadata.getShuffleVideo();
         playlistInfo = metadata.getPlaylistInfo();
         isSubscribed = metadata.isSubscribed();
         likeCount = metadata.getLikeCount();
@@ -785,6 +788,7 @@ public final class Video {
         video.isLive = isLive;
         video.isUpcoming = isUpcoming;
         video.nextMediaItem = nextMediaItem;
+        video.shuffleMediaItem = shuffleMediaItem;
         video.durationMs = durationMs;
 
         if (getGroup() != null) {
