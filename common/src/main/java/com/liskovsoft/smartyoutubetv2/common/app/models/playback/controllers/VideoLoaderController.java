@@ -14,7 +14,6 @@ import com.liskovsoft.sharedutils.mylogger.Log;
 import com.liskovsoft.sharedutils.rx.RxHelper;
 import com.liskovsoft.smartyoutubetv2.common.R;
 import com.liskovsoft.smartyoutubetv2.common.app.models.data.Playlist;
-import com.liskovsoft.smartyoutubetv2.common.app.models.data.SimpleMediaItem;
 import com.liskovsoft.smartyoutubetv2.common.app.models.data.Video;
 import com.liskovsoft.smartyoutubetv2.common.app.models.data.VideoGroup;
 import com.liskovsoft.smartyoutubetv2.common.app.models.playback.BasePlayerController;
@@ -27,7 +26,6 @@ import com.liskovsoft.smartyoutubetv2.common.misc.MediaServiceManager;
 import com.liskovsoft.smartyoutubetv2.common.prefs.PlayerData;
 import com.liskovsoft.smartyoutubetv2.common.prefs.PlayerTweaksData;
 import com.liskovsoft.smartyoutubetv2.common.utils.AppDialogUtil;
-import com.liskovsoft.smartyoutubetv2.common.utils.UniqueRandom;
 import com.liskovsoft.smartyoutubetv2.common.utils.Utils;
 import com.liskovsoft.youtubeapi.service.YouTubeServiceManager;
 
@@ -223,6 +221,11 @@ public class VideoLoaderController extends BasePlayerController {
         }
 
         applyPlaybackMode(getPlaybackMode());
+    }
+
+    @Override
+    public void onTickle() {
+        preloadNextVideoIfNeeded();
     }
 
     @Override
@@ -528,7 +531,6 @@ public class VideoLoaderController extends BasePlayerController {
             } else {
                 getPlayerData().setVideoBufferType(PlayerData.BUFFER_MEDIUM);
             }
-            showMessage = false; // save RAM?
         } else if (Helpers.containsAny(errorContent, "Exception in CronetUrlRequest")) {
             if (getVideo() != null && !getVideo().isLive) { // Finished live stream may provoke errors in Cronet
                 getPlayerTweaksData().setPlayerDataSource(PlayerTweaksData.PLAYER_DATA_SOURCE_DEFAULT);
@@ -934,6 +936,16 @@ public class VideoLoaderController extends BasePlayerController {
             if (width > 0 && height > 0 && (getPlayerData().getAspectRatio() == PlayerData.ASPECT_RATIO_DEFAULT || isShorts)) {
                 getPlayer().setAspectRatio((float) width / height);
             }
+        }
+    }
+
+    private void preloadNextVideoIfNeeded() {
+        if (isEmbedPlayer() || getPlayer() == null || getVideo() == null || getVideo().isLive) {
+            return;
+        }
+
+        if (getPlayer().getDurationMs() - getPlayer().getPositionMs() < 50_000) {
+            MediaServiceManager.instance().loadFormatInfo(mSuggestionsController.getNext(), formatInfo -> {});
         }
     }
 }
