@@ -224,11 +224,6 @@ public class VideoLoaderController extends BasePlayerController {
     }
 
     @Override
-    public void onTickle() {
-        preloadNextVideoIfNeeded();
-    }
-
-    @Override
     public void onSuggestionItemClicked(Video item) {
         openVideoInt(item);
 
@@ -525,11 +520,11 @@ public class VideoLoaderController extends BasePlayerController {
             if (getPlayerTweaksData().getPlayerDataSource() == PlayerTweaksData.PLAYER_DATA_SOURCE_OKHTTP) {
                 // OkHttp has memory leak problems
                 enableFasterDataSource();
-            } else if (getPlayerData().getVideoBufferType() == PlayerData.BUFFER_MEDIUM || getPlayerData().getVideoBufferType() == PlayerData.BUFFER_LOW) {
+            } else if (getPlayerData().getVideoBufferType() == PlayerData.BUFFER_HIGH || getPlayerData().getVideoBufferType() == PlayerData.BUFFER_HIGHEST) {
+                getPlayerData().setVideoBufferType(PlayerData.BUFFER_MEDIUM);
+            } else {
                 getPlayerTweaksData().enableSectionPlaylist(false);
                 restartEngine = false;
-            } else {
-                getPlayerData().setVideoBufferType(PlayerData.BUFFER_MEDIUM);
             }
         } else if (Helpers.containsAny(errorContent, "Exception in CronetUrlRequest")) {
             if (getVideo() != null && !getVideo().isLive) { // Finished live stream may provoke errors in Cronet
