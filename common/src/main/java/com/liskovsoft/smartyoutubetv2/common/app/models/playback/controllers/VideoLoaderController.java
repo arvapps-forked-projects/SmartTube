@@ -14,6 +14,7 @@ import com.liskovsoft.sharedutils.mylogger.Log;
 import com.liskovsoft.sharedutils.rx.RxHelper;
 import com.liskovsoft.smartyoutubetv2.common.R;
 import com.liskovsoft.smartyoutubetv2.common.app.models.data.Playlist;
+import com.liskovsoft.smartyoutubetv2.common.app.models.data.SimpleMediaItem;
 import com.liskovsoft.smartyoutubetv2.common.app.models.data.Video;
 import com.liskovsoft.smartyoutubetv2.common.app.models.data.VideoGroup;
 import com.liskovsoft.smartyoutubetv2.common.app.models.playback.BasePlayerController;
@@ -258,7 +259,7 @@ public class VideoLoaderController extends BasePlayerController {
             return;
         }
 
-        if (getPlayerData().isSonyTimerFixEnabled() && System.currentTimeMillis() - mSleepTimerStartMs > 60 * 60 * 1_000) {
+        if (getPlayerData().isSonyTimerFixEnabled() && System.currentTimeMillis() - mSleepTimerStartMs > 3 * 60 * 60 * 1_000) {
             getPlayer().setPlayWhenReady(false);
             getPlayer().setTitle(getContext().getString(R.string.sleep_timer));
             getPlayer().showOverlay(true);
@@ -354,10 +355,10 @@ public class VideoLoaderController extends BasePlayerController {
             mSuggestionsController.loadSuggestions(getVideo());
             bgImageUrl = getVideo().getBackgroundUrl();
 
-            if (formatInfo.isHistoryBroken()) { // bot check error or the video is hidden
+            if (formatInfo.isBotCheckError()) {
                 YouTubeServiceManager.instance().applyNoPlaybackFix();
                 scheduleRebootAppTimer(5_000);
-            } else { // 18+ video
+            } else { // 18+ video or the video is hidden/removed
                 scheduleNextVideoTimer(5_000);
             }
         } else if (acceptDashVideo(formatInfo)) {
@@ -809,6 +810,41 @@ public class VideoLoaderController extends BasePlayerController {
     }
 
     private void loadRandomNext() {
+        MediaServiceManager.instance().disposeActions();
+
+        if (getPlayer() == null || getPlayerData() == null || getVideo() == null || getVideo().playlistInfo == null ||
+                getPlayerData().getPlaybackMode() != PlayerConstants.PLAYBACK_MODE_SHUFFLE) {
+            return;
+        }
+
+        if (getVideo().playlistInfo.getSize() != -1) {
+            Video video = new Video();
+            video.playlistId = getVideo().playlistId;
+            video.playlistIndex = Utils.getRandomIndex(getVideo().playlistInfo.getCurrentIndex(), getVideo().playlistInfo.getSize());
+            MediaServiceManager.instance().loadMetadata(video, randomMetadata -> {
+                if (randomMetadata.getNextVideo() == null) {
+                    return;
+                }
+
+                getVideo().nextMediaItem = SimpleMediaItem.from(randomMetadata);
+                getPlayer().setNextTitle(Video.from(getVideo().nextMediaItem));
+            });
+        } else {
+            VideoGroup topRow = getPlayer().getSuggestionsByIndex(0); // the playlist row
+            if (topRow != null) {
+                int currentIdx = topRow.indexOf(getVideo());
+                int randomIndex = Utils.getRandomIndex(currentIdx, topRow.getSize());
+
+                if (randomIndex != -1) {
+                    Video nextVideo = topRow.get(randomIndex);
+                    getVideo().nextMediaItem = SimpleMediaItem.from(nextVideo);
+                    getPlayer().setNextTitle(nextVideo);
+                }
+            }
+        }
+    }
+
+    private void loadRandomNext2() {
         if (getPlayer() == null || getPlayerData() == null || getVideo() == null || getVideo().isShuffled ||
                 getVideo().shuffleMediaItem == null || getPlayerData().getPlaybackMode() != PlayerConstants.PLAYBACK_MODE_SHUFFLE) {
             return;
@@ -858,8 +894,8 @@ public class VideoLoaderController extends BasePlayerController {
             return;
         }
 
-        // Force to all subsequent videos in section playlist row
-        if (previous.isSectionPlaylistEnabled(getContext())) {
+        // Force to all subsequent videos in section playlist row (e.g. on Home)
+        if (previous.isSectionPlaylistEnabled(getContext()) && !Helpers.equals(previous.playlistId, next.playlistId)) {
             previous.forceSectionPlaylist = false;
             next.forceSectionPlaylist = true;
         }
