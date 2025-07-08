@@ -202,6 +202,10 @@ public class MediaServiceManager implements OnAccountChange {
     }
 
     public void loadChannelRows(Video item, OnMediaGroupList onMediaGroupList) {
+        loadChannelRows(item, onMediaGroupList, null);
+    }
+
+    public void loadChannelRows(Video item, OnMediaGroupList onMediaGroupList, OnError onError) {
         if (item == null) {
             return;
         }
@@ -214,7 +218,12 @@ public class MediaServiceManager implements OnAccountChange {
         mRowsAction = observable
                 .subscribe(
                         onMediaGroupList::onMediaGroupList,
-                        error -> Log.e(TAG, "loadChannelRows error: %s", error.getMessage())
+                        error -> {
+                            Log.e(TAG, "loadChannelRows error: %s", error.getMessage());
+                            if (onError != null) {
+                                onError.onError(error);
+                            }
+                        }
                 );
     }
 
@@ -465,7 +474,7 @@ public class MediaServiceManager implements OnAccountChange {
      * Channels could be of two types: regular (usr channel) and playlist channel (contains single row, try search: 'Mon mix')
      */
     public static void chooseChannelPresenter(Context context, Video item) {
-        if (item.hasVideo() || item.belongsToChannelUploads()) { // regular channel
+        if (item.hasVideo() || item.hasReloadPageKey()) { // an channel item from Channels section
             ChannelPresenter.instance(context).openChannel(item);
             return;
         }
@@ -500,6 +509,6 @@ public class MediaServiceManager implements OnAccountChange {
             } else {
                 MessageHelpers.showMessage(context, "Unknown type of channel");
             }
-        });
+        }, error -> LoadingManager.showLoading(context, false));
     }
 }
