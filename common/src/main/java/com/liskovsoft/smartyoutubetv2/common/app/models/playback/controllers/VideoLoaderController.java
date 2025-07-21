@@ -546,22 +546,26 @@ public class VideoLoaderController extends BasePlayerController {
             }
         } else if (type == PlayerEventListener.ERROR_TYPE_SOURCE && rendererIndex == PlayerEventListener.RENDERER_INDEX_UNKNOWN) {
             // NOTE: Starts with any (url deciphered incorrectly)
-            // "Response code: 403" (poToken error)
+            // "Response code: 403" (poToken error, forbidden)
             // "Response code: 404" (not sure whether below helps)
             // "Response code: 503" (not sure whether below helps)
             // "Response code: 400" (not sure whether below helps)
-            // "Response code: 429" (subtitle error)
-            // "Response code: 500" (subtitle error)
+            // "Response code: 429" (subtitle error, too many requests)
+            // "Response code: 500" (subtitle error, generic server error)
 
             // NOTE: Fixing too many requests or network issues
             // NOTE: All these errors have unknown renderer (-1)
             // "Unable to connect to", "Invalid NAL length", "Response code: 421",
             // "Response code: 404", "Response code: 429", "Invalid integer size",
             // "Unexpected ArrayIndexOutOfBoundsException", "Unexpected IndexOutOfBoundsException"
-            if (getPlayer() != null && !FormatItem.SUBTITLE_NONE.equals(getPlayer().getSubtitleFormat())) {
-                disableSubtitles();
-            } else {
+            if (Helpers.startsWithAny(errorContent, "Response code: 403")) {
                 YouTubeServiceManager.instance().applyNoPlaybackFix();
+            } else if (getPlayer() != null && !FormatItem.SUBTITLE_NONE.equals(getPlayer().getSubtitleFormat())) {
+                disableSubtitles(); // Response code: 429
+            } else if (getPlayerTweaksData().isHighBitrateFormatsEnabled()) {
+                getPlayerTweaksData().enableHighBitrateFormats(false); // Response code: 429
+            } else {
+                YouTubeServiceManager.instance().applyNoPlaybackFix(); // Response code: 403
             }
             restartEngine = false;
         } else if (type == PlayerEventListener.ERROR_TYPE_RENDERER && rendererIndex == PlayerEventListener.RENDERER_INDEX_SUBTITLE) {
