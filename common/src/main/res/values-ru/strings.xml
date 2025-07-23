@@ -672,7 +672,7 @@
     <string name="calm_msg">Мы решаем проблему. Время от времени проверяйте обновления</string>
     <string name="without_picture">Без изображения</string>
     <string name="video_disabled">Видео отключено</string>
-    <string name="applying_fix">Не закрывайте плеер. Применение исправления...</string>
+    <string name="applying_fix">Не закрывайте плеер. Применение исправления…</string>
     <string name="hide_mixes">Скрывать Миксы</string>
     <string name="player_global_focus_desc">Эта функция влияет на то, какая кнопка проигрывателя получит фокус при навигации между рядами кнопок проигрывателя</string>
     <string name="disable_network_error_fixing">Отключить автоматическое исправление сетевых ошибок</string>
@@ -693,4 +693,5 @@
     <string name="card_preview_full">Видео со звуком</string>
     <string name="card_preview">Предпросмотр карточки</string>
     <string name="card_unlocalized_titles">Не переводить названия видео</string>
+    <string name="dont_resize_video_to_fit_dialog">Не изменять размер видео в соответствии с диалогом</string>
 </resources>
