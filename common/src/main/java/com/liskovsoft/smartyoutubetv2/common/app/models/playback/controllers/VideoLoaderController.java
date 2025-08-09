@@ -129,7 +129,7 @@ public class VideoLoaderController extends BasePlayerController {
                 getPlayer().getDurationMs() - getPlayer().getPositionMs() < STREAM_END_THRESHOLD_MS) {
             getMainController().onPlayEnd();
         } else if (!getVideo().isLive && !getVideo().isLiveEnd && !getPlayerTweaksData().isNetworkErrorFixingDisabled()) {
-            MessageHelpers.showLongMessage(getContext(), R.string.applying_fix);
+            MessageHelpers.showLongMessage(getContext(), R.string.playback_buffering_fix);
             // Faster source is different among devices. Try them one by one.
             switchNextEngine();
             restartEngine();
@@ -332,7 +332,7 @@ public class VideoLoaderController extends BasePlayerController {
     }
 
     private void processFormatInfo(MediaItemFormatInfo formatInfo) {
-        if (getPlayer() == null) {
+        if (getPlayer() == null || getVideo() == null) {
             return;
         }
 
@@ -342,10 +342,6 @@ public class VideoLoaderController extends BasePlayerController {
 
         // Fix stretched video for a couple milliseconds (before the onVideoSizeChanged gets called)
         applyAspectRatio(formatInfo);
-
-        //if (formatInfo.containsMedia()) {
-        //    getStateService().setHistoryBroken(formatInfo.isHistoryBroken());
-        //}
 
         if (formatInfo.getPaidContentText() != null && getContentBlockData().isPaidContentNotificationEnabled()) {
             MessageHelpers.showMessage(getContext(), formatInfo.getPaidContentText());
@@ -531,7 +527,7 @@ public class VideoLoaderController extends BasePlayerController {
             } else if (getPlayerData().getVideoBufferType() == PlayerData.BUFFER_HIGH || getPlayerData().getVideoBufferType() == PlayerData.BUFFER_HIGHEST) {
                 getPlayerData().setVideoBufferType(PlayerData.BUFFER_MEDIUM);
             } else {
-                getPlayerTweaksData().enableSectionPlaylist(false);
+                getPlayerTweaksData().setSectionPlaylistEnabled(false);
                 restartEngine = false;
             }
         } else if (Helpers.containsAny(errorContent, "Exception in CronetUrlRequest", "Response code: 503")) {
@@ -560,7 +556,7 @@ public class VideoLoaderController extends BasePlayerController {
                 disableSubtitles(); // Response code: 429
                 YouTubeServiceManager.instance().applySubtitleFix();
             } else if (getPlayerTweaksData().isHighBitrateFormatsEnabled()) {
-                getPlayerTweaksData().enableHighBitrateFormats(false); // Response code: 429
+                getPlayerTweaksData().setHighBitrateFormatsEnabled(false); // Response code: 429
             } else {
                 YouTubeServiceManager.instance().applyPlaybackFix(); // Response code: 403
             }
@@ -573,7 +569,7 @@ public class VideoLoaderController extends BasePlayerController {
         } else if (type == PlayerEventListener.ERROR_TYPE_RENDERER && rendererIndex == PlayerEventListener.RENDERER_INDEX_VIDEO) {
             getPlayerData().setFormat(FormatItem.VIDEO_FHD_AVC_30);
             if (getPlayerTweaksData().isSWDecoderForced()) {
-                getPlayerTweaksData().forceSWDecoder(false);
+                getPlayerTweaksData().setSWDecoderForced(false);
             } else {
                 restartEngine = false;
             }
