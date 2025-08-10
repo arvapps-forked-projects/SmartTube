@@ -49,7 +49,6 @@ public final class Video {
     public int itemType = -1;
     public String channelId;
     public String videoId;
-    public String videoUrl;
     public String playlistId;
     public String remotePlaylistId;
     public int playlistIndex = -1;
@@ -112,7 +111,6 @@ public final class Video {
             final String title,
             final String desc,
             final String videoId,
-            final String videoUrl,
             final String bgImageUrl,
             final String cardImageUrl,
             final String author) {
@@ -121,7 +119,6 @@ public final class Video {
         this.title = title;
         this.secondTitle = desc;
         this.videoId = videoId;
-        this.videoUrl = videoUrl;
         this.bgImageUrl = bgImageUrl;
         this.cardImageUrl = cardImageUrl;
         this.author = author;
@@ -141,7 +138,6 @@ public final class Video {
         video.itemType = item.getType();
         video.videoId = item.getVideoId();
         video.channelId = item.getChannelId();
-        video.videoUrl = item.getVideoUrl();
         video.bgImageUrl = item.getBackgroundImageUrl();
         video.cardImageUrl = item.getCardImageUrl();
         video.author = item.getAuthor();
@@ -176,7 +172,6 @@ public final class Video {
         video.secondTitle = item.secondTitle;
         video.videoId = item.videoId;
         video.channelId = item.channelId;
-        video.videoUrl = item.videoUrl;
         video.bgImageUrl = item.bgImageUrl;
         video.cardImageUrl = item.cardImageUrl;
         video.author = item.author;
@@ -452,7 +447,7 @@ public final class Video {
         result.category = Helpers.parseStr(split[1]);
         result.title = Helpers.parseStr(split[2]);
         result.videoId = Helpers.parseStr(split[3]);
-        result.videoUrl = Helpers.parseStr(split[4]);
+        //result.videoUrl = Helpers.parseStr(split[4]);
         result.playlistId = Helpers.parseStr(split[5]);
         result.channelId = Helpers.parseStr(split[6]);
         result.bgImageUrl = Helpers.parseStr(split[7]);
@@ -483,7 +478,7 @@ public final class Video {
     @NonNull
     @Override
     public String toString() {
-        return Helpers.mergeObj(id, category, title, videoId, videoUrl, playlistId, channelId, bgImageUrl, cardImageUrl,
+        return Helpers.mergeObj(id, category, title, videoId, null, playlistId, channelId, bgImageUrl, cardImageUrl,
                 null, playlistParams, sectionId, getReloadPageKey(), itemType, secondTitle, previewUrl, percentWatched,
                 metadataTitle, metadataSecondTitle, badge, isLive, channelGroupId, searchQuery);
     }
@@ -550,7 +545,8 @@ public final class Video {
     }
 
     public boolean isMix() {
-        return !isLive && Helpers.hasWords(badge) && (durationMs <= 0 || isSynced) && (hasPlaylist() || hasChannel() || hasNestedItems());
+        return mediaItem != null && !isLive && !isLiveEnd && Helpers.hasWords(badge) &&
+                (durationMs <= 0 || isSynced) && (hasPlaylist() || hasChannel() || hasNestedItems());
     }
 
     public boolean isFullLive() {
