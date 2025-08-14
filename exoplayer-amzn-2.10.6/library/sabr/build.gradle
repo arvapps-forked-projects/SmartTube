@@ -1,4 +1,4 @@
-// Copyright (C) 2016 The Android Open Source Project
+// Copyright (C) 2017 The Android Open Source Project
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,31 +15,45 @@ apply from: '../../constants.gradle'
 apply plugin: 'com.android.library'
 
 android {
-    // MOD: FIX warning: source value 7 is obsolete and will be removed in a future release
+    compileSdkVersion project.ext.compileSdkVersion
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
 
-    compileSdkVersion project.ext.compileSdkVersion
-
     defaultConfig {
         minSdkVersion project.ext.minSdkVersion
         targetSdkVersion project.ext.targetSdkVersion
     }
+
+    buildTypes {
+        // Re-enable test coverage when the following issue is fixed:
+        // https://issuetracker.google.com/issues/37019591
+        // debug {
+        //    testCoverageEnabled = true
+        // }
+    }
+
+    testOptions.unitTests.includeAndroidResources = true
 }
 
 dependencies {
-    api project(modulePrefix + 'library-core')
-    api project(modulePrefix + 'library-dash')
-    api project(modulePrefix + 'library-sabr')
-    api project(modulePrefix + 'library-hls')
-    api project(modulePrefix + 'library-smoothstreaming')
-    api project(modulePrefix + 'library-ui')
+    implementation project(modulePrefix + 'library-core')
+    implementation project(':mediaserviceinterfaces')
+    compileOnly 'org.checkerframework:checker-qual:' + checkerframeworkVersion
+    implementation 'androidx.annotation:annotation:1.1.0'
+    testImplementation project(modulePrefix + 'testutils-robolectric')
+    testImplementation project(modulePrefix + 'library-sabr')
 }
 
 ext {
-    releaseArtifact = 'exoplayer'
-    releaseDescription = 'The ExoPlayer library (all modules).'
+    javadocTitle = 'SABR module'
+}
+apply from: '../../javadoc_library.gradle'
+
+ext {
+    releaseArtifact = 'exoplayer-sabr'
+    releaseDescription = 'The ExoPlayer library SABR module.'
 }
 apply from: '../../publish.gradle'
