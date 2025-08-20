@@ -406,6 +406,10 @@ public class VideoLoaderController extends BasePlayerController {
     }
 
     private void scheduleReloadVideoTimer(int delayMs) {
+        if (getPlayer() == null) {
+            return;
+        }
+
         if (getPlayer().isEngineInitialized()) {
             Log.d(TAG, "Reloading the video...");
             getPlayer().showOverlay(true);
@@ -414,6 +418,10 @@ public class VideoLoaderController extends BasePlayerController {
     }
 
     private void scheduleNextVideoTimer(int delayMs) {
+        if (getPlayer() == null) {
+            return;
+        }
+
         if (getPlayer().isEngineInitialized()) {
             Log.d(TAG, "Starting the next video...");
             getPlayer().showOverlay(true);
@@ -967,6 +975,8 @@ public class VideoLoaderController extends BasePlayerController {
             boolean isShorts = width < height;
             if (width > 0 && height > 0 && (getPlayerData().getAspectRatio() == PlayerData.ASPECT_RATIO_DEFAULT || isShorts)) {
                 getPlayer().setAspectRatio((float) width / height);
+            } else {
+                getPlayer().setAspectRatio(getPlayerData().getAspectRatio());
             }
         }
     }
