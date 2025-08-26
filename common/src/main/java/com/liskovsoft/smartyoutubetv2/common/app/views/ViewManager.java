@@ -104,7 +104,7 @@ public class ViewManager {
      */
     public void startView(Class<?> viewClass, boolean forceStart) {
         // Skip starting activity twice to get rid of pausing/resuming activity cycle
-        if (Utils.isAppInForegroundFixed() && getTopView() != null && getTopView() == viewClass) {
+        if (Utils.isAppInForegroundFixed() && getTopView() == viewClass) {
             return;
         }
 
@@ -446,7 +446,7 @@ public class ViewManager {
     }
 
     public boolean isTopViewVisible() {
-        BasePresenter<?> presenter = getCurrentPresenter();
+        BasePresenter<?> presenter = getTopPresenter();
 
         return presenter != null && isVisible(presenter.getView());
     }
@@ -483,7 +483,7 @@ public class ViewManager {
         }
     }
 
-    public BasePresenter<?> getCurrentPresenter() {
+    public BasePresenter<?> getTopPresenter() {
         Class<?> topView = getTopView();
 
         if (topView == BrowseView.class) {
@@ -494,6 +494,8 @@ public class ViewManager {
             return ChannelPresenter.instance(mContext);
         } else if (topView == ChannelUploadsView.class) {
             return ChannelUploadsPresenter.instance(mContext);
+        } else if (topView == PlaybackView.class) {
+            return PlaybackPresenter.instance(mContext);
         }
 
         return null;
