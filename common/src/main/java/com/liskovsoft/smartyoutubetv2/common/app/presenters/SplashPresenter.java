@@ -6,7 +6,6 @@ import android.content.Intent;
 
 import com.liskovsoft.mediaserviceinterfaces.oauth.Account;
 import com.liskovsoft.mediaserviceinterfaces.data.MediaGroup;
-import com.liskovsoft.sharedutils.GlobalConstants;
 import com.liskovsoft.sharedutils.helpers.Helpers;
 import com.liskovsoft.sharedutils.helpers.MessageHelpers;
 import com.liskovsoft.sharedutils.mylogger.Log;
@@ -276,7 +275,9 @@ public class SplashPresenter extends BasePresenter<SplashView> {
             if (videoId != null) {
                 long timeMs = IntentExtractor.extractVideoTimeMs(intent);
                 PlaybackPresenter playbackPresenter = PlaybackPresenter.instance(getContext());
-                playbackPresenter.openVideo(videoId, IntentExtractor.hasFinishOnEndedFlag(intent), timeMs);
+                boolean finishOnEnded = IntentExtractor.hasFinishOnEndedFlag(intent);
+                boolean incognito = IntentExtractor.isIncognitoIntent(intent);
+                playbackPresenter.openVideo(videoId, finishOnEnded, timeMs, incognito);
 
                 enablePlayerOnlyModeIfNeeded(intent);
 
@@ -367,8 +368,8 @@ public class SplashPresenter extends BasePresenter<SplashView> {
     private void enablePlayerOnlyModeIfNeeded(Intent intent) {
         ViewManager viewManager = getViewManager();
 
-        boolean isRestartIntent = intent.getBooleanExtra(GlobalConstants.RESTART_INTENT, false);
-        boolean isATVIntent = intent.getBooleanExtra(GlobalConstants.ATV_INTENT, false);
+        boolean isRestartIntent = IntentExtractor.isRestartIntent(intent);
+        boolean isATVIntent = IntentExtractor.isATVIntent(intent);
         boolean isExternalIntent = !isRestartIntent && !isATVIntent && !viewManager.isTopViewVisible();
 
         viewManager.enablePlayerOnlyMode((isATVIntent && GeneralData.instance(getContext()).isReturnToLauncherEnabled()) || isExternalIntent);

@@ -54,13 +54,13 @@ import androidx.work.PeriodicWorkRequest;
 import androidx.work.WorkManager;
 
 import com.jakewharton.processphoenix.ProcessPhoenix;
-import com.liskovsoft.sharedutils.GlobalConstants;
 import com.liskovsoft.sharedutils.helpers.Helpers;
 import com.liskovsoft.sharedutils.helpers.MessageHelpers;
 import com.liskovsoft.sharedutils.misc.WeakHashSet;
 import com.liskovsoft.sharedutils.mylogger.Log;
 import com.liskovsoft.smartyoutubetv2.common.BuildConfig;
 import com.liskovsoft.smartyoutubetv2.common.R;
+import com.liskovsoft.smartyoutubetv2.common.app.models.data.Video;
 import com.liskovsoft.smartyoutubetv2.common.app.models.playback.manager.PlayerConstants;
 import com.liskovsoft.smartyoutubetv2.common.app.models.playback.manager.PlayerManager;
 import com.liskovsoft.smartyoutubetv2.common.app.models.playback.service.VideoStateService;
@@ -900,22 +900,27 @@ public class Utils {
     public static void restartTheApp(Context context) {
         try {
             Intent intent = new Intent(context, Class.forName(BOOTSTRAP_ACTIVITY_CLASS_NAME));
-            intent.putExtra(GlobalConstants.RESTART_INTENT, true);
+            intent.putExtra(IntentExtractor.RESTART_INTENT, true);
             ProcessPhoenix.triggerRebirth(context, intent);
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
         }
     }
 
-    public static void restartTheApp(Context context, String videoId, long posMs) {
+    public static void restartTheApp(Context context, Video video, long posMs) {
+        if (video == null || !video.hasVideo()) {
+            return;
+        }
+
         try {
             Intent intent = new Intent(
                     Intent.ACTION_VIEW,
-                    Uri.parse(String.format("https://www.youtube.com/watch?v=%s&t=%ss", videoId, posMs / 1_000)),
+                    Uri.parse(String.format("https://www.youtube.com/watch?v=%s&t=%ss", video.videoId, posMs / 1_000)),
                     context,
                     Class.forName(BOOTSTRAP_ACTIVITY_CLASS_NAME)
             );
-            intent.putExtra(GlobalConstants.RESTART_INTENT, true);
+            intent.putExtra(IntentExtractor.RESTART_INTENT, true);
+            intent.putExtra(IntentExtractor.INCOGNITO_INTENT, video.incognito);
             ProcessPhoenix.triggerRebirth(context, intent);
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
