@@ -8,6 +8,10 @@ import com.google.android.exoplayer2.C;
 import com.google.android.exoplayer2.Format;
 import com.google.android.exoplayer2.drm.DrmInitData;
 import com.google.android.exoplayer2.drm.DrmInitData.SchemeData;
+import com.google.android.exoplayer2.source.sabr.manifest.SegmentBase.SegmentList;
+import com.google.android.exoplayer2.source.sabr.manifest.SegmentBase.SegmentTemplate;
+import com.google.android.exoplayer2.source.sabr.manifest.SegmentBase.SegmentTimelineElement;
+import com.google.android.exoplayer2.source.sabr.manifest.SegmentBase.SingleSegmentBase;
 import com.google.android.exoplayer2.util.MimeTypes;
 import com.liskovsoft.mediaserviceinterfaces.data.MediaFormat;
 import com.liskovsoft.mediaserviceinterfaces.data.MediaItemFormatInfo;
@@ -22,8 +26,11 @@ public class SabrManifestParser {
     private int mId;
     private static final String NULL_INDEX_RANGE = "0-0";
     private static final String NULL_CONTENT_LENGTH = "0";
+    private static final int MAX_DURATION_SEC = 48 * 60 * 60;
+    private MediaItemFormatInfo mFormatInfo;
 
     public SabrManifest parse(@NonNull MediaItemFormatInfo formatInfo) {
+        mFormatInfo = formatInfo;
         return parseSabrManifest(formatInfo);
     }
 
@@ -127,17 +134,142 @@ public class SabrManifestParser {
         return new AdaptationSet(id, contentType, representations);
     }
 
-    private SegmentBase parseSegmentTemplate(MediaFormat format) {
-        // TODO: not implemented
-        return null;
+    private SegmentTemplate parseSegmentTemplate(MediaFormat format) {
+        int unitsPerSecond = 1_000_000;
+
+        // Present on live streams only.
+        int segmentDurationUs = mFormatInfo.getSegmentDurationUs();
+
+        if (segmentDurationUs <= 0) {
+            // Inaccurate. Present on past (!) live streams.
+            segmentDurationUs = Integer.parseInt(format.getTargetDurationSec()) * 1_000_000;
+        }
+
+        int lengthSeconds = Integer.parseInt(mFormatInfo.getLengthSeconds());
+
+        if (mFormatInfo.isLive() || lengthSeconds <= 0) {
+            // For premiere streams (length > 0) or regular streams (length == 0) set window that exceeds normal limits - 48hrs
+            lengthSeconds = MAX_DURATION_SEC;
+        }
+
+        // To make long streams (12hrs) seekable we should decrease size of the segment a bit
+        //long segmentDurationUnits = (long) targetDurationSec * unitsPerSecond * 9999 / 10000;
+        int segmentDurationUnits = (int)(segmentDurationUs * (long) unitsPerSecond / 1_000_000);
+        // Increase count a bit to compensate previous tweak
+        //long segmentCount = (long) lengthSeconds / targetDurationSec * 10000 / 9999;
+        //int segmentCount = (int)(lengthSeconds * (long) unitsPerSecond / segmentDurationUnits);
+        int segmentCount = (int) Math.ceil(lengthSeconds * (double) unitsPerSecond / segmentDurationUnits);
+        // Increase offset a bit to compensate previous tweaks
+        // Streams to check:
+        // https://www.youtube.com/watch?v=drdemkJpgao
+        long offsetUnits = (long) segmentDurationUnits * mFormatInfo.getStartSegmentNum();
+
+        long timescale = unitsPerSecond;
+        long presentationTimeOffset = offsetUnits;
+        long duration = segmentDurationUnits;
+        long startNumber = mFormatInfo.getStartSegmentNum();
+        long endNumber = C.INDEX_UNSET;
+        UrlTemplate mediaTemplate = UrlTemplate.compile(format.getUrl() + "&sq=$Number$");
+        UrlTemplate initializationTemplate = UrlTemplate.compile(format.getOtfInitUrl()); // ?
+
+        RangedUri initialization = parseRangedUrl(format.getSourceUrl(), format.getInit());
+
+        List<SegmentTimelineElement> timeline = parseSegmentTimeline(offsetUnits, segmentDurationUnits, segmentCount);
+
+        return new SegmentTemplate(
+                initialization,
+                timescale,
+                presentationTimeOffset,
+                startNumber,
+                endNumber,
+                duration,
+                timeline,
+                initializationTemplate,
+                mediaTemplate);
     }
 
-    private SegmentBase parseSegmentList(MediaFormat format) {
-        // TODO: not implemented
-        return null;
+    private SegmentList parseSegmentList(MediaFormat format) {
+        long timescale = 1;
+        long presentationTimeOffset = 0;
+        long duration = C.TIME_UNSET;
+        long startNumber = 1;
+
+        RangedUri initialization = parseRangedUrl(format.getSourceUrl(), format.getInit());
+
+        List<SegmentTimelineElement> timeline = parseSegmentTimeline(format);
+
+        List<RangedUri> segments = parseSegmentUrl(format);
+
+        return new SegmentList(initialization, timescale, presentationTimeOffset,
+                startNumber, duration, timeline, segments);
     }
 
-    private SegmentBase parseSegmentBase(MediaFormat format) {
+    private RangedUri parseRangedUrl(String urlText, String rangeText) {
+        long rangeStart = 0;
+        long rangeLength = C.LENGTH_UNSET;
+        if (rangeText != null) {
+            String[] rangeTextArray = rangeText.split("-");
+            rangeStart = Long.parseLong(rangeTextArray[0]);
+            if (rangeTextArray.length == 2) {
+                rangeLength = Long.parseLong(rangeTextArray[1]) - rangeStart + 1;
+            }
+        }
+
+        return new RangedUri(urlText, rangeStart, rangeLength);
+    }
+
+    private List<SegmentTimelineElement> parseSegmentTimeline(MediaFormat format) {
+        List<SegmentTimelineElement> timeline = new ArrayList<>();
+
+        if (format.getGlobalSegmentList() == null) {
+            return timeline;
+        }
+
+        // From writeGlobalSegmentList
+        long elapsedTime = 0;
+
+        // SegmentURL tag
+        for (String segment : format.getGlobalSegmentList()) {
+            long duration = Helpers.parseLong(segment);
+            int count = 1;
+            for (int i = 0; i < count; i++) {
+                timeline.add(new SegmentTimelineElement(elapsedTime, duration));
+                elapsedTime += duration;
+            }
+        }
+
+        return timeline;
+    }
+
+    private List<SegmentTimelineElement> parseSegmentTimeline(long elapsedTime, long duration, int segmentCount) {
+        List<SegmentTimelineElement> timeline = new ArrayList<>();
+
+        // From writeLiveMediaSegmentList
+        int count = 1 + segmentCount;
+        for (int i = 0; i < count; i++) {
+            timeline.add(new SegmentTimelineElement(elapsedTime, duration));
+            elapsedTime += duration;
+        }
+
+        return timeline;
+    }
+
+    private List<RangedUri> parseSegmentUrl(MediaFormat format) {
+        List<RangedUri> segments = new ArrayList<>();
+
+        if (format.getSegmentUrlList() == null) {
+            return segments;
+        }
+
+        // SegmentURL tag
+        for (String url : format.getSegmentUrlList()) {
+            segments.add(parseRangedUrl(url, null));
+        }
+
+        return segments;
+    }
+
+    private SingleSegmentBase parseSegmentBase(MediaFormat format) {
         // TODO: not implemented
         return null;
     }
