@@ -1,5 +1,6 @@
 package com.google.android.exoplayer2.source.dash.manifest;
 
+import android.text.TextUtils;
 import android.util.Pair;
 
 import androidx.annotation.NonNull;
@@ -23,6 +24,7 @@ import com.liskovsoft.youtubeapi.formatbuilders.utils.ITagUtils;
 import com.liskovsoft.youtubeapi.formatbuilders.utils.MediaFormatUtils;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -61,12 +63,11 @@ public class DashManifestParser2 {
         long suggestedPresentationDelayMs = C.TIME_UNSET;
         long publishTimeMs = C.TIME_UNSET;
         boolean dynamic = false;
-        long minUpdateTimeMs = 3155690800000L; // "P100Y" no refresh (there is no dash url)
+        long minUpdateTimeMs = C.TIME_UNSET; // 3155690800000L, "P100Y" no refresh (there is no dash url)
 
         List<Period> periods = new ArrayList<>();
-        long nextPeriodStartMs = 0;
 
-        Pair<Period, Long> periodWithDurationMs = parsePeriod(formatInfo, nextPeriodStartMs);
+        Pair<Period, Long> periodWithDurationMs = parsePeriod(formatInfo);
         if (periodWithDurationMs != null) {
             Period period = periodWithDurationMs.first;
             periods.add(period);
@@ -92,9 +93,9 @@ public class DashManifestParser2 {
         return lenSeconds > 0 ? lenSeconds * 1_000 : C.TIME_UNSET;
     }
 
-    private Pair<Period, Long> parsePeriod(MediaItemFormatInfo formatInfo, long nextPeriodStartMs) {
+    private Pair<Period, Long> parsePeriod(MediaItemFormatInfo formatInfo) {
         String id = formatInfo.getVideoId();
-        long startMs = formatInfo.getStartTimeMs();
+        long startMs = 0; // Should add real start time or make it unset?
         long durationMs = getDurationMs(formatInfo);
         List<AdaptationSet> adaptationSets = new ArrayList<>();
 
@@ -108,37 +109,40 @@ public class DashManifestParser2 {
 
         // MXPlayer fix: write high quality formats first
         if (!mMP4Videos.isEmpty()) {
-            adaptationSets.add(parseAdaptationSet(mMP4Videos, C.TRACK_TYPE_VIDEO));
+            adaptationSets.add(parseAdaptationSet(mMP4Videos));
         }
         if (!mWEBMVideos.isEmpty()) {
-            adaptationSets.add(parseAdaptationSet(mWEBMVideos, C.TRACK_TYPE_VIDEO));
+            adaptationSets.add(parseAdaptationSet(mWEBMVideos));
         }
 
         for (Set<MediaFormat> formats : mMP4Audios.values()) {
-            adaptationSets.add(parseAdaptationSet(formats, C.TRACK_TYPE_AUDIO));
+            adaptationSets.add(parseAdaptationSet(formats));
         }
 
         for (Set<MediaFormat> formats : mWEBMAudios.values()) {
-            adaptationSets.add(parseAdaptationSet(formats, C.TRACK_TYPE_AUDIO));
+            adaptationSets.add(parseAdaptationSet(formats));
         }
 
-        if (!mSubs.isEmpty()) {
-            adaptationSets.add(parseAdaptationSet(mSubs));
+        for (MediaSubtitle subtitle : mSubs) {
+            adaptationSets.add(parseAdaptationSet(Collections.singletonList(subtitle)));
         }
 
         return Pair.create(new Period(id, startMs, adaptationSets), durationMs);
     }
 
-    private AdaptationSet parseAdaptationSet(List<MediaSubtitle> formats) {
-        int contentType = C.TRACK_TYPE_TEXT;
+    private AdaptationSet parseAdaptationSet(Set<MediaFormat> formats) {
         int id = mId++;
+        int contentType = C.TRACK_TYPE_UNKNOWN;
         String label = null;
         String drmSchemeType = null;
         ArrayList<SchemeData> drmSchemeDatas = new ArrayList<>();
         List<RepresentationInfo> representationInfos = new ArrayList<>();
 
-        for (MediaSubtitle format : formats) {
+        for (MediaFormat format : formats) {
             RepresentationInfo representationInfo = parseRepresentation(format);
+            if (contentType == C.TRACK_TYPE_UNKNOWN) {
+                contentType = getContentType(representationInfo.format);
+            }
             representationInfos.add(representationInfo);
         }
 
@@ -156,15 +160,19 @@ public class DashManifestParser2 {
         return new AdaptationSet(id, contentType, representations, new ArrayList<>(), new ArrayList<>());
     }
 
-    private AdaptationSet parseAdaptationSet(Set<MediaFormat> formats, int contentType) {
+    private AdaptationSet parseAdaptationSet(List<MediaSubtitle> formats) {
         int id = mId++;
+        int contentType = C.TRACK_TYPE_UNKNOWN;
         String label = null;
         String drmSchemeType = null;
         ArrayList<SchemeData> drmSchemeDatas = new ArrayList<>();
         List<RepresentationInfo> representationInfos = new ArrayList<>();
 
-        for (MediaFormat format : formats) {
+        for (MediaSubtitle format : formats) {
             RepresentationInfo representationInfo = parseRepresentation(format);
+            if (contentType == C.TRACK_TYPE_UNKNOWN) {
+                contentType = getContentType(representationInfo.format);
+            }
             representationInfos.add(representationInfo);
         }
 
@@ -339,6 +347,8 @@ public class DashManifestParser2 {
     }
 
     private RepresentationInfo parseRepresentation(MediaFormat mediaFormat) {
+        int roleFlags = C.ROLE_FLAG_MAIN;
+        int selectionFlags = C.SELECTION_FLAG_DEFAULT;
         String id = mediaFormat.isDrc() ? mediaFormat.getITag() + "-drc" : mediaFormat.getITag();
         int bandwidth = Helpers.parseInt(mediaFormat.getBitrate(), Format.NO_VALUE);
         String mimeType = MediaFormatUtils.extractMimeType(mediaFormat);
@@ -365,6 +375,8 @@ public class DashManifestParser2 {
                         audioSamplingRate,
                         bandwidth,
                         language,
+                        roleFlags,
+                        selectionFlags,
                         codecs);
 
         SegmentBase segmentBase = null;
@@ -384,6 +396,8 @@ public class DashManifestParser2 {
     }
 
     private RepresentationInfo parseRepresentation(MediaSubtitle sub) {
+        int roleFlags = C.ROLE_FLAG_SUBTITLE;
+        int selectionFlags = 0;
         String id = String.valueOf(mId++);
         int bandwidth = 268;
         String mimeType = sub.getMimeType();
@@ -410,6 +424,8 @@ public class DashManifestParser2 {
                         audioSamplingRate,
                         bandwidth,
                         language,
+                        roleFlags,
+                        selectionFlags,
                         codecs);
 
         SegmentBase segmentBase = new SingleSegmentBase();
@@ -439,7 +455,8 @@ public class DashManifestParser2 {
                 representationInfo.revisionId,
                 format,
                 representationInfo.baseUrl,
-                representationInfo.segmentBase);
+                representationInfo.segmentBase,
+                new ArrayList<>());
     }
 
     protected Format buildFormat(
@@ -452,10 +469,10 @@ public class DashManifestParser2 {
             int audioSamplingRate,
             int bitrate,
             String language,
+            @C.RoleFlags int roleFlags,
+            @C.SelectionFlags int selectionFlags,
             String codecs) {
         String sampleMimeType = getSampleMimeType(containerMimeType, codecs);
-        @C.SelectionFlags int selectionFlags = C.SELECTION_FLAG_DEFAULT;
-        @C.RoleFlags int roleFlags = C.ROLE_FLAG_MAIN;
         if (sampleMimeType != null) {
             if (MimeTypes.isVideo(sampleMimeType)) {
                 return Format.createVideoContainerFormat(
@@ -647,6 +664,20 @@ public class DashManifestParser2 {
         }
 
         return mediaFormats;
+    }
+
+    protected int getContentType(Format format) {
+        String sampleMimeType = format.sampleMimeType;
+        if (TextUtils.isEmpty(sampleMimeType)) {
+            return C.TRACK_TYPE_UNKNOWN;
+        } else if (MimeTypes.isVideo(sampleMimeType)) {
+            return C.TRACK_TYPE_VIDEO;
+        } else if (MimeTypes.isAudio(sampleMimeType)) {
+            return C.TRACK_TYPE_AUDIO;
+        } else if (mimeTypeIsRawText(sampleMimeType)) {
+            return C.TRACK_TYPE_TEXT;
+        }
+        return C.TRACK_TYPE_UNKNOWN;
     }
 
     /** A parsed Representation element. */
