@@ -563,10 +563,6 @@ public final class Video {
         return Helpers.allNulls(videoId, playlistId, reloadPageKey, playlistParams, channelId, searchQuery) || isMovie;
     }
 
-    public boolean belongsToUserPlaylists() {
-        return getGroup() != null && getGroup().getMediaGroup() != null && getGroup().getMediaGroup().getType() == MediaGroup.TYPE_USER_PLAYLISTS;
-    }
-
     public String getGroupTitle() {
         return getGroup() != null ? getGroup().getTitle() : null;
     }
@@ -576,30 +572,24 @@ public final class Video {
      */
     public String getReloadPageKey() {
         return reloadPageKey != null ? reloadPageKey :
-                (getGroup() != null && getGroup().getMediaGroup() != null && getGroup().getMediaGroup().getReloadPageKey() != null) ? getGroup().getMediaGroup().getReloadPageKey() : null;
+                getGroup() != null ? getGroup().getReloadPageKey() : null;
     }
 
     public String getNextPageKey() {
-        return getGroup() != null && getGroup().getMediaGroup() != null && getGroup().getMediaGroup().getNextPageKey() != null ? getGroup().getMediaGroup().getNextPageKey() : null;
+        return getGroup() != null ? getGroup().getNextPageKey() : null;
     }
 
     public String getBackgroundUrl() {
         return bgImageUrl != null ? bgImageUrl : BLACK_PLACEHOLDER_URL;
     }
 
-    public boolean belongsToUndefined() {
-        return getGroup() != null && getGroup().getMediaGroup() != null && getGroup().getMediaGroup().getType() == MediaGroup.TYPE_UNDEFINED;
-    }
-
     public boolean belongsToSameAuthorGroup() {
-        if (!checkMediaItems()) {
+        if (getGroup() == null || getGroup().getSize() < 2) {
             return false;
         }
 
-        List<MediaItem> mediaItems = getGroup().getMediaGroup().getMediaItems();
-
-        MediaItem first = mediaItems.get(0);
-        MediaItem last = mediaItems.get(mediaItems.size() - 1);
+        Video first = getGroup().get(0);
+        Video last = getGroup().get(getGroup().getSize() - 1);
 
         String author1 = extractAuthor(first.getSecondTitle());
         String author2 = extractAuthor(last.getSecondTitle());
@@ -608,24 +598,22 @@ public final class Video {
     }
 
     public boolean belongsToSamePlaylistGroup() {
-        if (!checkMediaItems()) {
+        if (getGroup() == null || getGroup().getSize() < 2) {
             return false;
         }
 
-        List<MediaItem> mediaItems = getGroup().getMediaGroup().getMediaItems();
-
         // Some items may not have a playlistId (e.g. movies)
-        List<MediaItem> filtered = Helpers.filter(mediaItems, item -> item.getPlaylistId() != null || item.getParams() != null, 10);
+        List<Video> filtered = Helpers.filter(getGroup().getVideos(), item -> item.getPlaylistId() != null || item.playlistParams != null, 10);
 
         if (filtered == null || filtered.size() < 2) {
             return false;
         }
 
-        MediaItem first = filtered.get(0);
-        MediaItem second = filtered.get(1);
+        Video first = filtered.get(0);
+        Video second = filtered.get(1);
 
-        String playlist1 = first.getPlaylistId() != null ? first.getPlaylistId() : first.getParams();
-        String playlist2 = second.getPlaylistId() != null ? second.getPlaylistId() : second.getParams();
+        String playlist1 = first.getPlaylistId() != null ? first.getPlaylistId() : first.playlistParams;
+        String playlist2 = second.getPlaylistId() != null ? second.getPlaylistId() : second.playlistParams;
 
         return playlist1 != null && playlist2 != null && Helpers.equals(playlist1, playlist2);
     }
@@ -676,6 +664,14 @@ public final class Video {
 
     public boolean belongsToSuggestions() {
         return belongsToGroup(MediaGroup.TYPE_SUGGESTIONS);
+    }
+
+    public boolean belongsToUserPlaylists() {
+        return belongsToGroup(MediaGroup.TYPE_USER_PLAYLISTS);
+    }
+
+    public boolean belongsToUndefined() {
+        return belongsToGroup(MediaGroup.TYPE_UNDEFINED);
     }
 
     private boolean belongsToGroup(int groupId) {
@@ -799,11 +795,6 @@ public final class Video {
         return video;
     }
 
-    private boolean checkMediaItems() {
-        return getGroup() != null && getGroup().getMediaGroup() != null
-                && getGroup().getMediaGroup().getMediaItems() != null && getGroup().getMediaGroup().getMediaItems().size() >= 2;
-    }
-
     private MediaItem findNextVideo(MediaItemMetadata metadata) {
         if (metadata == null) {
             return null;
@@ -882,8 +873,11 @@ public final class Video {
         }
     }
 
+    /**
+     * The section playlist intended (as a backup replacement) for cases when regular playlist not available
+     */
     public boolean isSectionPlaylistEnabled(Context context) {
-        return PlayerTweaksData.instance(context).isSectionPlaylistEnabled() && getGroup() != null && !belongsToSuggestions() &&
+        return PlayerTweaksData.instance(context).isSectionPlaylistEnabled() && getGroup() != null && getGroup().getSize() > 1 && !belongsToSuggestions() &&
                 (playlistId == null || PLAYLIST_LIKED_MUSIC.equals(playlistId) || nextMediaItem == null || forceSectionPlaylist ||
                         (!isMix() && !belongsToSamePlaylistGroup())) && // skip hidden playlists (music videos usually)
                     (!isRemote || remotePlaylistId == null);
