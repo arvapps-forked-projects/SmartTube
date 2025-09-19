@@ -94,8 +94,6 @@ public class VideoLoaderController extends BasePlayerController {
             return;
         }
 
-        boolean isVideoChanged = !item.equals(getVideo());
-
         if (!item.fromQueue) {
             mPlaylist.add(item);
         } else {
@@ -104,11 +102,7 @@ public class VideoLoaderController extends BasePlayerController {
 
         if (getPlayer() != null && getPlayer().isEngineInitialized()) { // player is initialized
             // Fix improperly resized video after exit from PIP (Device Formuler Z8 Pro)
-            if (isVideoChanged || !getPlayer().containsMedia() || getPlayer().isInPIPMode()) {
-                loadVideo(item); // force play immediately
-            } else {
-                loadSuggestions(item); // update suggestions only
-            }
+            loadVideo(item); // force play immediately even the same video
         } else {
             mPendingVideo = item;
         }
@@ -125,8 +119,11 @@ public class VideoLoaderController extends BasePlayerController {
         }
 
         // Stream end check (hangs on buffering)
-        if ((!getVideo().isLive || getVideo().isLiveEnd) &&
-                getPlayer().getDurationMs() - getPlayer().getPositionMs() < STREAM_END_THRESHOLD_MS) {
+        if (getPlayerTweaksData().isHighBitrateFormatsEnabled()) {
+            getPlayerTweaksData().setHighBitrateFormatsEnabled(false); // Response code: 429
+            reloadVideo();
+        } else if ((!getVideo().isLive || getVideo().isLiveEnd)
+                && getPlayer().getDurationMs() - getPlayer().getPositionMs() < STREAM_END_THRESHOLD_MS) {
             getMainController().onPlayEnd();
         } else if (!getVideo().isLive && !getVideo().isLiveEnd
                 && !getPlayerTweaksData().isNetworkErrorFixingDisabled() && Playlist.instance().getAllAfterCurrent() == null) {
@@ -194,6 +191,10 @@ public class VideoLoaderController extends BasePlayerController {
     }
 
     public void loadPrevious() {
+        if (getPlayer() == null) {
+            return;
+        }
+
         openVideoInt(mSuggestionsController.getPrevious());
 
         if (getPlayerTweaksData().isPlayerUiOnNextEnabled()) {
@@ -202,8 +203,11 @@ public class VideoLoaderController extends BasePlayerController {
     }
 
     public void loadNext() {
+        if (getPlayer() == null || getVideo() == null) {
+            return;
+        }
+
         Video next = mSuggestionsController.getNext();
-        //getVideo() = null; // in case next video is the same as previous
 
         if (next != null) {
             next.isShuffled = getVideo().isShuffled;
@@ -518,6 +522,12 @@ public class VideoLoaderController extends BasePlayerController {
         // Hide begin errors in embed mode (e.g. wrong date/time: unable to connect to...)
         if (isEmbedPlayer() && getPlayer() != null && getPlayer().getPositionMs() == 0) {
             getPlayer().finish();
+            return;
+        }
+
+        if (getVideo() != null && getVideo().isLiveEnd) {
+            // Url no longer works (e.g. live stream ended)
+            loadNext();
             return;
         }
 
