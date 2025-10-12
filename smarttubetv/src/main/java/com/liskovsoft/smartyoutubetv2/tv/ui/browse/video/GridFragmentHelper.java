@@ -5,6 +5,7 @@ import android.content.res.Resources;
 import android.util.DisplayMetrics;
 import android.util.Pair;
 
+import com.liskovsoft.sharedutils.helpers.Helpers;
 import com.liskovsoft.smartyoutubetv2.common.app.models.data.VideoGroup;
 import com.liskovsoft.smartyoutubetv2.common.app.views.ViewManager;
 import com.liskovsoft.smartyoutubetv2.common.prefs.MainUIData;
@@ -118,7 +119,7 @@ public class GridFragmentHelper {
     }
 
     public static VideoGroupObjectAdapter findRelatedAdapter(Map<Integer, VideoGroupObjectAdapter> mediaGroupAdapters, VideoGroup group, RowFreezer freezer) {
-        if (group == null || group.getMediaGroup() == null || mediaGroupAdapters == null) {
+        if (group == null || mediaGroupAdapters == null) {
             return null;
         }
 
@@ -128,24 +129,16 @@ public class GridFragmentHelper {
 
         // Find out could we continue an existing one (vertical scroll YouTube layout)
         if (existingAdapter == null) {
-            Float value = sMaxColsNum.get(R.dimen.card_width);
+            Float value = sMaxColsNum.get(group.isShorts() ? R.dimen.shorts_card_width : R.dimen.card_width);
             int minAdapterSize = value != null ? value.intValue() : MIN_ADAPTER_SIZE;
 
             for (VideoGroupObjectAdapter adapter : mediaGroupAdapters.values()) {
-                // if size < 6 && cannot continue && the titles equals
-                int size = adapter.size();
-                VideoGroup lastGroup = adapter.getAll().get(size - 1).getGroup();
-                boolean matchedRowFound = lastGroup != null
-                        && lastGroup.getMediaGroup() != null
-                        && lastGroup.getMediaGroup().getNextPageKey() == null
-                        && group.getMediaGroup().getNextPageKey() == null
-                        && group.getSize() < minAdapterSize;
-                if (matchedRowFound) {
+                if (isMatchedRowFound(adapter, group)) {
                     // Remain other rows of the same type untitled (usually the such rows share the same titles)
                     group.setTitle(null);
 
-                    if (size < minAdapterSize) {
-                        int missingCount = minAdapterSize - size;
+                    if (adapter.size() < minAdapterSize && group.getSize() < minAdapterSize) {
+                        int missingCount = minAdapterSize - adapter.size();
                         if (group.getSize() > missingCount) {
                             // Split the group to match 'minAdapterSize'
                             VideoGroup missingGroup = VideoGroup.from(group.getVideos().subList(0, missingCount));
@@ -163,5 +156,18 @@ public class GridFragmentHelper {
         }
 
         return existingAdapter;
+    }
+
+    private static boolean isMatchedRowFound(VideoGroupObjectAdapter adapter, VideoGroup group) {
+        VideoGroup lastGroup = adapter.getAll().get(adapter.size() - 1).getGroup();
+        boolean matchedRowFound = lastGroup != null
+                && lastGroup.getMediaGroup() != null
+                && lastGroup.getMediaGroup().getNextPageKey() == null
+                && group.getMediaGroup() != null
+                && group.getMediaGroup().getNextPageKey() == null
+                && lastGroup.isShorts() == group.isShorts()
+                && (Helpers.equals(lastGroup.getTitle(), group.getTitle())
+                    || lastGroup.getTitle() == null); // we could set title to null in the previous iteration
+        return matchedRowFound;
     }
 }
