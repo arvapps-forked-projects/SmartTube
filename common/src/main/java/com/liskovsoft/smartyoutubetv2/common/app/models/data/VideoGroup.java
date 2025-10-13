@@ -166,7 +166,7 @@ public class VideoGroup {
     public List<Video> getVideos() {
         // NOTE: Don't make the collection read only
         // The collection will be filtered inside VideoGroupObjectAdapter
-        return mVideos;
+        return Collections.unmodifiableList(mVideos);
     }
 
     public String getTitle() {
@@ -392,10 +392,6 @@ public class VideoGroup {
         return mVideos.get(idx);
     }
 
-    public List<Video> getAll() {
-        return mVideos;
-    }
-
     public void remove(Video video) {
         if (mVideos == null) {
             return;
@@ -420,6 +416,14 @@ public class VideoGroup {
     }
 
     public void add(Video video) {
+        // TODO: remove the hack someday.
+        // Dirty hack for avoiding group duplication.
+        // Duplicated items suddenly appeared in Home, Subscriptions and History.
+        // See: VideoGroupObjectAdapter.mVideoItems
+        if (mVideos != null && mVideos.contains(video)) {
+            return;
+        }
+
         int size = getSize();
         add(size != -1 ? size : 0, video);
     }
