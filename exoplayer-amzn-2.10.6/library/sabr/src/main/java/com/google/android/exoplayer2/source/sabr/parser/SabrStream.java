@@ -5,6 +5,9 @@ import androidx.annotation.NonNull;
 import com.google.android.exoplayer2.extractor.ExtractorInput;
 import com.google.android.exoplayer2.source.sabr.parser.exceptions.MediaSegmentMismatchError;
 import com.google.android.exoplayer2.source.sabr.parser.exceptions.SabrStreamError;
+import com.google.android.exoplayer2.source.sabr.parser.models.AudioSelector;
+import com.google.android.exoplayer2.source.sabr.parser.models.CaptionSelector;
+import com.google.android.exoplayer2.source.sabr.parser.models.VideoSelector;
 import com.google.android.exoplayer2.source.sabr.parser.parts.RefreshPlayerResponseSabrPart;
 import com.google.android.exoplayer2.source.sabr.parser.parts.SabrPart;
 import com.google.android.exoplayer2.source.sabr.parser.processor.ProcessFormatInitializationMetadataResult;
@@ -17,6 +20,7 @@ import com.google.android.exoplayer2.source.sabr.parser.ump.UMPDecoder;
 import com.google.android.exoplayer2.source.sabr.parser.ump.UMPPart;
 import com.google.android.exoplayer2.source.sabr.parser.ump.UMPPartId;
 import com.google.android.exoplayer2.source.sabr.protos.videostreaming.ClientAbrState;
+import com.google.android.exoplayer2.source.sabr.protos.videostreaming.ClientInfo;
 import com.google.android.exoplayer2.source.sabr.protos.videostreaming.FormatInitializationMetadata;
 import com.google.android.exoplayer2.source.sabr.protos.videostreaming.LiveMetadata;
 import com.google.android.exoplayer2.source.sabr.protos.videostreaming.NextRequestPolicy;
@@ -36,10 +40,12 @@ import com.liskovsoft.sharedutils.querystringparser.UrlQueryStringFactory;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
-public class SabrStreamParser {
-    private static final String TAG = SabrStreamParser.class.getSimpleName();
+public class SabrStream {
+    private static final String TAG = SabrStream.class.getSimpleName();
     private final int[] KNOWN_PARTS = {
             UMPPartId.MEDIA_HEADER,
             UMPPartId.MEDIA,
@@ -55,24 +61,90 @@ public class SabrStreamParser {
             UMPPartId.SABR_CONTEXT_SENDING_POLICY,
             UMPPartId.RELOAD_PLAYER_RESPONSE
     };
+    private final int[] IGNORED_PARTS = {
+            UMPPartId.REQUEST_IDENTIFIER,
+            UMPPartId.REQUEST_CANCELLATION_POLICY,
+            UMPPartId.PLAYBACK_START_POLICY,
+            UMPPartId.ALLOWED_CACHED_FORMATS,
+            UMPPartId.PAUSE_BW_SAMPLING_HINT,
+            UMPPartId.START_BW_SAMPLING_HINT,
+            UMPPartId.REQUEST_PIPELINING,
+            UMPPartId.SELECTABLE_FORMATS,
+            UMPPartId.PREWARM_CONNECTION,
+    };
     private final UMPDecoder decoder;
     private final SabrProcessor processor;
+    private final NoSegmentsTracker noNewSegmentsTracker;
+    private final Set<Integer> unknownPartTypes;
     private int sqMismatchForwardCount;
     private int sqMismatchBacktrackCount;
     private boolean receivedNewSegments;
     private String url;
     private List<? extends  SabrPart> multiResult = null;
 
-    public SabrStreamParser(@NonNull ExtractorInput extractorInput) {
-        decoder = new UMPDecoder(extractorInput);
-        processor = new SabrProcessor();
+    private static class NoSegmentsTracker { // TODO: move to the SABR request builder
+        public int consecutiveRequests = 0;
+        public float timestampStarted = -1;
+        public int liveHeadSegmentStarted = -1;
+
+        public void reset() {
+             consecutiveRequests = 0;
+             timestampStarted = -1;
+             liveHeadSegmentStarted = -1;
+        }
+
+        public void increment(int liveHeadSegment) {
+            if (consecutiveRequests == 0) {
+                timestampStarted = System.currentTimeMillis() * 1_000;
+                liveHeadSegmentStarted = liveHeadSegment;
+            }
+            consecutiveRequests += 1;
+        }
     }
 
-    public SabrPart parse() {
+    public SabrStream(
+            @NonNull String serverAbrStreamingUrl,
+            @NonNull String videoPlaybackUstreamerConfig,
+            @NonNull ClientInfo clientInfo,
+            AudioSelector audioSelection,
+            VideoSelector videoSelection,
+            CaptionSelector captionSelection,
+            int liveSegmentTargetDurationSec,
+            int liveSegmentTargetDurationToleranceMs,
+            long startTimeMs,
+            String poToken,
+            boolean postLive,
+            String videoId
+    ) {
+        decoder = new UMPDecoder();
+        processor = new SabrProcessor(
+                videoPlaybackUstreamerConfig,
+                clientInfo,
+                audioSelection,
+                videoSelection,
+                captionSelection,
+                liveSegmentTargetDurationSec,
+                liveSegmentTargetDurationToleranceMs,
+                startTimeMs,
+                poToken,
+                postLive,
+                videoId
+        );
+        url = serverAbrStreamingUrl;
+
+        // Whether we got any new (not consumed) segments in the request
+        noNewSegmentsTracker = new NoSegmentsTracker();
+        unknownPartTypes = new HashSet<>();
+
+        sqMismatchBacktrackCount = 0;
+        sqMismatchForwardCount = 0;
+    }
+
+    public SabrPart parse(@NonNull ExtractorInput extractorInput) {
         SabrPart result = null;
 
         while (result == null && (multiResult == null || multiResult.isEmpty())) {
-            UMPPart part = nextKnownUMPPart();
+            UMPPart part = nextKnownUMPPart(extractorInput);
 
             if (part == null) {
                 break;
@@ -114,6 +186,12 @@ public class SabrStreamParser {
             case UMPPartId.RELOAD_PLAYER_RESPONSE:
                 return processReloadPlayerResponse(part);
         }
+
+        if (!contains(IGNORED_PARTS, part.partId)) {
+            unknownPartTypes.add(part.partId);
+        }
+
+        Log.d(TAG, "Unhandled part type %s", part.partId);
 
         return null;
     }
@@ -360,11 +438,11 @@ public class SabrStreamParser {
         return false;
     }
 
-    private UMPPart nextKnownUMPPart() {
+    private UMPPart nextKnownUMPPart(@NonNull ExtractorInput extractorInput) {
         UMPPart part;
 
         while (true) {
-            part = decoder.decode();
+            part = decoder.decode(extractorInput);
 
             if (part == null) {
                 break;
