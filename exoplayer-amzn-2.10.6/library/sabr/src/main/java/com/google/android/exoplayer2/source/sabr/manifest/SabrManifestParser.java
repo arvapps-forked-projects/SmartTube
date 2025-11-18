@@ -13,6 +13,8 @@ import com.google.android.exoplayer2.source.sabr.manifest.SegmentBase.SegmentLis
 import com.google.android.exoplayer2.source.sabr.manifest.SegmentBase.SegmentTemplate;
 import com.google.android.exoplayer2.source.sabr.manifest.SegmentBase.SegmentTimelineElement;
 import com.google.android.exoplayer2.source.sabr.manifest.SegmentBase.SingleSegmentBase;
+import com.google.android.exoplayer2.source.sabr.protos.videostreaming.ClientInfo;
+import com.google.android.exoplayer2.source.sabr.protos.videostreaming.ClientName;
 import com.google.android.exoplayer2.util.MimeTypes;
 import com.liskovsoft.mediaserviceinterfaces.data.MediaFormat;
 import com.liskovsoft.mediaserviceinterfaces.data.MediaItemFormatInfo;
@@ -82,7 +84,12 @@ public class SabrManifestParser {
                 timeShiftBufferDepthMs,
                 suggestedPresentationDelayMs,
                 publishTimeMs,
-                periods);
+                periods,
+                formatInfo.getServerAbrStreamingUrl(),
+                formatInfo.getVideoPlaybackUstreamerConfig(),
+                formatInfo.getPoToken(),
+                formatInfo.getVideoId(),
+                createClientInfo(formatInfo));
     }
 
     private static long getDurationMs(MediaItemFormatInfo formatInfo) {
@@ -674,6 +681,15 @@ public class SabrManifestParser {
             return C.TRACK_TYPE_TEXT;
         }
         return C.TRACK_TYPE_UNKNOWN;
+    }
+
+    private ClientInfo createClientInfo(MediaItemFormatInfo formatInfo) {
+        MediaItemFormatInfo.ClientInfo clientInfo = formatInfo.getClientInfo();
+
+        return ClientInfo.newBuilder()
+                .setClientName(ClientName.valueOf(clientInfo.getClientName()))
+                .setClientVersion(clientInfo.getClientVersion())
+                .build();
     }
 
     /** A parsed Representation element. */
