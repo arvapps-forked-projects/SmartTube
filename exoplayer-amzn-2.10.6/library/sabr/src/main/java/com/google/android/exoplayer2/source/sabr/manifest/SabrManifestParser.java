@@ -229,7 +229,8 @@ public class SabrManifestParser {
         long duration = segmentDurationUnits;
         long startNumber = mFormatInfo.getStartSegmentNum();
         long endNumber = C.INDEX_UNSET;
-        UrlTemplate mediaTemplate = UrlTemplate.compile(format.getUrl() + "&sq=$Number$");
+        String url = mFormatInfo.getServerAbrStreamingUrl();
+        UrlTemplate mediaTemplate = UrlTemplate.compile(url + "&sq=$Number$");
         //UrlTemplate initializationTemplate = UrlTemplate.compile(format.getOtfInitUrl()); // ?
         UrlTemplate initializationTemplate = null; // ?
 
@@ -363,7 +364,7 @@ public class SabrManifestParser {
         int audioChannels = Format.NO_VALUE;
         int audioSamplingRate = Helpers.parseInt(ITagUtils.getAudioRateByTag(mediaFormat.getITag()), Format.NO_VALUE);
         String language = mediaFormat.getLanguage();
-        String baseUrl = mediaFormat.getUrl();
+        String baseUrl = mFormatInfo.getServerAbrStreamingUrl();
         String label = mediaFormat.getQualityLabel();
         boolean isDrc = mediaFormat.isDrc();
         long lastModified = Helpers.parseLong(mediaFormat.getLmt());
@@ -390,7 +391,7 @@ public class SabrManifestParser {
 
         SegmentBase segmentBase = null;
 
-        if (MediaFormatUtils.isLiveMedia(mediaFormat)) {
+        if (MediaFormatUtils.isLiveMedia(baseUrl)) {
             segmentBase = parseSegmentTemplate(mediaFormat);
         } else if (mediaFormat.getSegmentUrlList() != null) {
             segmentBase = parseSegmentList(mediaFormat);
@@ -626,10 +627,10 @@ public class SabrManifestParser {
     }
 
     private void append(MediaFormat mediaItem) {
-        if (!MediaFormatUtils.checkMediaUrl(mediaItem)) {
-            Log.e(TAG, "Media item doesn't contain required url field!");
-            return;
-        }
+        //if (!MediaFormatUtils.checkMediaUrl(mediaItem)) {
+        //    Log.e(TAG, "Media item doesn't contain required url field!");
+        //    return;
+        //}
 
         // NOTE: FORMAT_STREAM_TYPE_OTF not supported
         if (!MediaFormatUtils.isDash(mediaItem)) {
